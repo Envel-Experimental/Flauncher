@@ -703,12 +703,17 @@ async function dlAsync(login = true) {
 
         // Attach listeners for logs from Main
         const tempListener = (data) => {
-            if (GAME_LAUNCH_REGEX.test(data.trim())) {
-                const diff = Date.now() - start
-                if (diff < MIN_LINGER) {
-                    setTimeout(() => toggleLaunchArea(false), MIN_LINGER - diff)
-                } else {
-                    toggleLaunchArea(false)
+            if (typeof data !== 'string') return
+            const lines = data.split(/\r?\n/)
+            for (const line of lines) {
+                if (GAME_LAUNCH_REGEX.test(line.trim())) {
+                    const diff = Date.now() - start
+                    if (diff < MIN_LINGER) {
+                        setTimeout(() => toggleLaunchArea(false), MIN_LINGER - diff)
+                    } else {
+                        toggleLaunchArea(false)
+                    }
+                    break
                 }
             }
         }
@@ -723,11 +728,8 @@ async function dlAsync(login = true) {
         window.HeliosAPI.launcher.onLog(tempListener)
         window.HeliosAPI.launcher.onLogError(gameErrorListener)
         window.HeliosAPI.launcher.onExit((code) => {
-            const lDetails = document.getElementById('launch_details')
-            if (lDetails && lDetails.style.display !== 'none') {
-                loggerLaunchSuite.warn(`Game exited with code ${code}. Resetting UI.`)
-                toggleLaunchArea(false)
-            }
+            loggerLaunchSuite.warn(`Game exited with code ${code}. Resetting UI.`)
+            toggleLaunchArea(false)
         })
 
         window.HeliosAPI.launcher.onLog((data) => {

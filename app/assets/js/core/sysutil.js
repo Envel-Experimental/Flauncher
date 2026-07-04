@@ -26,17 +26,30 @@ function getAvailableRamGb() {
                 if (err) return reject(err)
 
                 try {
-                    // On macOS, available RAM is the sum of free and inactive pages.
-                    const freeMatch = stdout.match(/Pages free:\s+(\d+)/)
-                    const inactiveMatch = stdout.match(/Pages inactive:\s+(\d+)/)
-                    if (!freeMatch || !inactiveMatch) throw new Error('Failed to parse vm_stat output')
+                    // On macOS, os.freemem() is misleadingly low due to aggressive caching.
+                    // A realistic available memory amount is Total Memory minus Wired Memory.
+                    const wiredMatch = stdout.match(/Pages wired down:\s+(\d+)/)
+                    if (wiredMatch) {
+                        const wiredPages = parseInt(wiredMatch[1])
+                        const pageSize = 4096 // Page size is typically 4096 bytes.
+                        const totalBytes = os.totalmem()
+                        const wiredBytes = wiredPages * pageSize
 
-                    const freePages = parseInt(freeMatch[1])
-                    const inactivePages = parseInt(inactiveMatch[1])
-                    const pageSize = 4096 // Page size is typically 4096 bytes.
+                        const availableBytes = Math.max(0, totalBytes - wiredBytes)
+                        resolve(availableBytes / BYTES_PER_GB)
+                    } else {
+                        // Fallback to free + inactive if wired pages is not found (e.g., in unit tests)
+                        const freeMatch = stdout.match(/Pages free:\s+(\d+)/)
+                        const inactiveMatch = stdout.match(/Pages inactive:\s+(\d+)/)
+                        if (!freeMatch || !inactiveMatch) throw new Error('Failed to parse vm_stat output')
 
-                    const availableBytes = (freePages + inactivePages) * pageSize
-                    resolve(availableBytes / BYTES_PER_GB)
+                        const freePages = parseInt(freeMatch[1])
+                        const inactivePages = parseInt(inactiveMatch[1])
+                        const pageSize = 4096
+
+                        const availableBytes = (freePages + inactivePages) * pageSize
+                        resolve(availableBytes / BYTES_PER_GB)
+                    }
                 } catch (e) {
                     reject(e)
                 }
@@ -137,9 +150,11 @@ exports.performChecks = async function () {
         }
     } catch (err) {
         console.error('Error checking available RAM:', err)
-        // Fallback to the old method on error.
-        if (os.freemem() / BYTES_PER_GB < FREE_RAM_THRESHOLD_GB) {
-            warnings.push('lowFreeRAM')
+        // Fallback to the old method on error, but skip for macOS to avoid false positives.
+        if (os.platform() !== 'darwin') {
+            if (os.freemem() / BYTES_PER_GB < FREE_RAM_THRESHOLD_GB) {
+                warnings.push('lowFreeRAM')
+            }
         }
     }
 

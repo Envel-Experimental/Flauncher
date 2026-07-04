@@ -2160,7 +2160,13 @@ export async function populateMemoryStatus() {
         settingsMemoryTotal.innerHTML = Number(os.totalmem() / 1073741824).toFixed(1) + 'G'
     }
     if (typeof settingsMemoryAvail !== 'undefined' && settingsMemoryAvail != null) {
-        settingsMemoryAvail.innerHTML = Number(os.freemem() / 1073741824).toFixed(1) + 'G'
+        try {
+            const sysutil = require('../../core/sysutil')
+            const availGb = await sysutil.getAvailableRamGb()
+            settingsMemoryAvail.innerHTML = availGb.toFixed(1) + 'G'
+        } catch (e) {
+            settingsMemoryAvail.innerHTML = Number(os.freemem() / 1073741824).toFixed(1) + 'G'
+        }
     }
     await populateDiskStatus()
 }
