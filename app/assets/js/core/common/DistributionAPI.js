@@ -289,7 +289,7 @@ class DistributionAPI {
                 return null;
             }
         } catch (e) {
-            DistributionAPI.log.error(`No distribution file found at ${path}!`);
+            DistributionAPI.log.info(`No distribution file found at ${path}!`);
             return null;
         }
     }

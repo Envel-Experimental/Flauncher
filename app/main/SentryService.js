@@ -38,6 +38,7 @@ class SentryService {
                             message.includes('ENOSPC') ||
                             message.includes('EPERM') ||
                             message.includes('EBUSY') ||
+                            message.includes('No distribution file found') ||
                             code === 'EPERM' ||
                             code === 'EBUSY' ||
                             code === 'ENOSPC'
