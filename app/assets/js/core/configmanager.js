@@ -232,6 +232,25 @@ exports.load = async function () {
     console.log('[ConfigManager] Initializing for Main Process')
     const fsSync = require('fs')
     const launcherDir = exports.getLauncherDirectorySync()
+
+    // Clean up leftover temporary files in the launcher directory
+    try {
+        if (fsSync.existsSync(launcherDir)) {
+            const files = fsSync.readdirSync(launcherDir)
+            for (const file of files) {
+                if (file.startsWith('config.json.tmp.')) {
+                    try {
+                        fsSync.unlinkSync(path.join(launcherDir, file))
+                    } catch (err) {
+                        // Ignore individual unlink errors
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[ConfigManager] Failed to clean up temp files:', e)
+    }
+
     configPath = path.join(launcherDir, 'config.json')
     console.log('[ConfigManager] Target config path: ' + configPath)
     configPathLEGACY = path.join(require('electron').app.getPath('userData'), 'config.json')
