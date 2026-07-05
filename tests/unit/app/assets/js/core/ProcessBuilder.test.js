@@ -114,6 +114,23 @@ describe('ProcessBuilder', () => {
         await expect(builder.build()).rejects.toThrow('Не удалось найти Java')
     })
 
+    it('should normalize javaPath to use backslashes on Windows', async () => {
+        const originalPlatform = process.platform
+        Object.defineProperty(process, 'platform', { value: 'win32' })
+        
+        const ConfigManager = require('../../../../../../app/assets/js/core/configmanager')
+        ConfigManager.getJavaExecutable.mockReturnValueOnce('C:/Users/Тестовый Юзер/AppData/Local/Java/javaw.exe')
+        
+        await builder.build()
+        expect(mockSpawn).toHaveBeenCalledWith(
+            'C:\\Users\\Тестовый Юзер\\AppData\\Local\\Java\\javaw.exe',
+            expect.any(Array),
+            expect.any(Object)
+        )
+        
+        Object.defineProperty(process, 'platform', { value: originalPlatform })
+    })
+
     it('should handle process exit', async () => {
         const child = await builder.build()
         const closeHandler = mockChild.on.mock.calls.find(call => call[0] === 'close')[1]

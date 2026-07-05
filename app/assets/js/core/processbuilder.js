@@ -118,7 +118,8 @@ class ProcessBuilder {
         }
 
         // 6. Spawn Process
-        this.javaPath = ConfigManager.getJavaExecutable(this.server.rawServer.id)
+        const { ensureDecodedPath } = require('./util/NodeUtil')
+        this.javaPath = ensureDecodedPath(ConfigManager.getJavaExecutable(this.server.rawServer.id))
         const javaPath = this.javaPath
         this.args = args
 

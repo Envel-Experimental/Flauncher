@@ -11,6 +11,9 @@ function ensureEncodedPath(path) {
 }
 
 function ensureDecodedPath(path) {
+    if (typeof path !== 'string') {
+        return path;
+    }
     if (path.startsWith('file://')) {
         try {
             return fileURLToPath(path);

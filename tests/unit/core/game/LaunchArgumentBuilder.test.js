@@ -97,5 +97,27 @@ describe('LaunchArgumentBuilder', () => {
             const cp = await builder.classpathArg([], '/natives', false, null, false)
             expect(cp[0]).toContain('1.16.5.jar')
         })
+
+        it('should ensure all paths use system separators on Windows', async () => {
+            const originalPlatform = process.platform
+            Object.defineProperty(process, 'platform', { value: 'win32' })
+            
+            builder._resolveServerLibraries = jest.fn().mockReturnValue({
+                'some-library': 'C:/Users/Тестовый Юзер/AppData/Roaming/.foxford/library.jar'
+            })
+            
+            const cp = await builder.classpathArg([], '/natives', false, null, false)
+            
+            // Check that all paths have no forward slashes (meaning they were normalized to backslashes)
+            const hasForwardSlashes = cp.some(p => p.includes('/'))
+            expect(hasForwardSlashes).toBe(false)
+            
+            // Ensure Cyrillic characters and spaces are preserved
+            const targetPath = cp.find(p => p.includes('Тестовый Юзер'))
+            expect(targetPath).toBeDefined()
+            expect(targetPath).toBe('C:\\Users\\Тестовый Юзер\\AppData\\Roaming\\.foxford\\library.jar')
+            
+            Object.defineProperty(process, 'platform', { value: originalPlatform })
+        })
     })
 })

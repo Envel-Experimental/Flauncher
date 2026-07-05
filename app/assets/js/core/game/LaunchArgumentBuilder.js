@@ -389,12 +389,14 @@ class LaunchArgumentBuilder {
         cpArgs = cpArgs.concat(Object.values(finalLibs))
 
         // Clean up paths (remove trailing jar if duplicated or malformed)
+        const { ensureDecodedPath } = require('../util/NodeUtil')
         const ext = '.jar'
         for (let i = 0; i < cpArgs.length; i++) {
             const extIndex = cpArgs[i].lastIndexOf(ext)
             if (extIndex > -1 && extIndex !== cpArgs[i].length - ext.length) {
                 cpArgs[i] = cpArgs[i].substring(0, extIndex + ext.length)
             }
+            cpArgs[i] = ensureDecodedPath(cpArgs[i])
         }
         return cpArgs
     }
