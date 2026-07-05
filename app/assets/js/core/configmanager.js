@@ -406,6 +406,15 @@ exports.removeAuthAccount = (uuid) => {
     if (config.selectedAccount === uuid) {
         config.selectedAccount = Object.keys(config.authenticationDatabase)[0] || null
     }
+
+    try {
+        const { removeCachedAvatar } = require('./util/AvatarCache')
+        if (typeof removeCachedAvatar === 'function') {
+            removeCachedAvatar(uuid)
+        }
+    } catch (e) {
+        console.error('Failed to remove cached avatar:', e)
+    }
 }
 
 exports.addMojangAuthAccount = function (uuid, accessToken, username, displayName) {

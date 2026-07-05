@@ -14,9 +14,18 @@ const UserProfile = () => {
   useEffect(() => {
     const updateProfile = (authUser) => {
       if (authUser) {
+        const { getCachedAvatar } = require('../../../core/util/AvatarCache')
+        const isOffline = authUser.accessToken === 'offline-access-token'
+        const identifier = (isOffline || !authUser.uuid) 
+            ? (authUser.displayName || authUser.username || authUser.uuid) 
+            : authUser.uuid
+
+        const cachedUrl = getCachedAvatar(identifier, 'head', (newUrl) => {
+          setUserData(prev => ({ ...prev, avatarUrl: newUrl }))
+        })
         setUserData({
           displayName: authUser.displayName,
-          avatarUrl: `https://mc-heads.net/head/${authUser.uuid}/100`
+          avatarUrl: cachedUrl
         });
       } else {
         setUserData({

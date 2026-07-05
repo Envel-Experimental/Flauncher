@@ -109,6 +109,30 @@ class IpcRegistry {
             console.warn('[Renderer Warning]', msg)
         })
 
+        // Avatar Cache IPCs
+        ipcMain.on('avatar:getSync', (event, uuid, type) => {
+            try {
+                const { getCachedAvatarSync } = require('../assets/js/core/util/AvatarCache')
+                event.returnValue = getCachedAvatarSync(uuid, type)
+            } catch (e) {
+                console.error('[IpcRegistry] Error in avatar:getSync:', e)
+                event.returnValue = null
+            }
+        })
+
+        ipcMain.handle('avatar:download', async (event, uuid, type) => {
+            try {
+                const { downloadAvatar } = require('../assets/js/core/util/AvatarCache')
+                downloadAvatar(uuid, type, (base64Url) => {
+                    if (event.sender && !event.sender.isDestroyed()) {
+                        event.sender.send('avatar:downloaded', { uuid, type, base64Url })
+                    }
+                })
+            } catch (e) {
+                console.error('[IpcRegistry] Error in avatar:download:', e)
+            }
+        })
+
         // Config IPCs
         ipcMain.handle('config:load', async () => {
             if (!ConfigManager.isLoaded()) await ConfigManager.load()

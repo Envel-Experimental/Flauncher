@@ -41,6 +41,12 @@ jest.mock('os', () => ({
     userInfo: jest.fn().mockReturnValue({ username: 'mock' })
 }))
 
+// Mock AvatarCache
+const mockRemoveCachedAvatar = jest.fn()
+jest.mock('../../../app/assets/js/core/util/AvatarCache', () => ({
+    removeCachedAvatar: mockRemoveCachedAvatar
+}))
+
 const ConfigManager = require('../../../app/assets/js/core/configmanager')
 
 describe('ConfigManager', () => {
@@ -74,6 +80,7 @@ describe('ConfigManager', () => {
         
         ConfigManager.removeAuthAccount('u1')
         expect(ConfigManager.getSelectedAccount()).toBeNull()
+        expect(mockRemoveCachedAvatar).toHaveBeenCalledWith('u1')
 
         ConfigManager.addMicrosoftAuthAccount('u2', 't2', 'n2', 100, 'ms1', 'ms2', 200)
         expect(ConfigManager.getAuthAccount('u2').type).toBe('microsoft')
