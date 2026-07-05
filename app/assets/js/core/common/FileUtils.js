@@ -13,13 +13,23 @@ const { spawn } = require('child_process')
  */
 async function runCommand(cmd, args, options = {}) {
     return new Promise((resolve, reject) => {
+        const { input, ...spawnOptions } = options;
         const process = spawn(cmd, args, {
-            ...options,
+            ...spawnOptions,
             shell: false
         });
 
         let stdout = Buffer.alloc(0);
         let stderr = Buffer.alloc(0);
+
+        if (input) {
+            if (Buffer.isBuffer(input) || typeof input === 'string') {
+                process.stdin.write(input);
+                process.stdin.end();
+            } else if (typeof input.pipe === 'function') {
+                input.pipe(process.stdin);
+            }
+        }
 
         process.stdout.on('data', (data) => { stdout = Buffer.concat([stdout, data]); });
         process.stderr.on('data', (data) => { stderr = Buffer.concat([stderr, data]); });
@@ -141,9 +151,14 @@ async function extractZip(archivePath, destDir, onEntry) {
     const isWin = process.platform === 'win32';
 
     if (isWin) {
+        await safeEnsureDir(destDir);
+        const tempName = `temp_extract_${crypto.randomBytes(6).toString('hex')}.zip`;
+        const tempPath = path.join(destDir, tempName);
         try {
-            await runCommand('tar', ['-xf', archivePath, '-C', destDir]);
+            await fs.copyFile(archivePath, tempPath);
+            await runCommand('tar', ['-xf', tempName], { cwd: destDir });
         } catch (e) {
+            console.error('[FileUtils] tar extraction failed:', e.message);
             const psCmd = `Expand-Archive -LiteralPath '${archivePath.replace(/'/g, "''")}' -DestinationPath '${destDir.replace(/'/g, "''")}' -Force`;
             const encodedCmd = Buffer.from(psCmd, 'utf16le').toString('base64');
             try {
@@ -151,6 +166,10 @@ async function extractZip(archivePath, destDir, onEntry) {
             } catch (psErr) {
                 throw new Error(`[FileUtils] Failed to extract zip. Both 'tar' and 'powershell' failed or are unavailable. PowerShell Error: ${psErr.message}`, { cause: psErr });
             }
+        } finally {
+            try {
+                await fs.unlink(tempPath);
+            } catch (err) {}
         }
     } else {
         await runCommand('unzip', ['-o', archivePath, '-d', destDir]);
@@ -161,8 +180,11 @@ async function extractZip(archivePath, destDir, onEntry) {
         let entries = [];
         try {
             if (isWin) {
+                const tempName = `temp_list_${crypto.randomBytes(6).toString('hex')}.zip`;
+                const tempPath = path.join(destDir, tempName);
                 try {
-                    const { stdout } = await runCommand('tar', ['-tf', archivePath]);
+                    await fs.copyFile(archivePath, tempPath);
+                    const { stdout } = await runCommand('tar', ['-tf', tempName], { cwd: destDir });
                     entries = stdout.toString().split(/\r?\n/).filter(l => l.trim().length > 0);
                 } catch (e) {
                     const psCmd = `
@@ -176,6 +198,10 @@ async function extractZip(archivePath, destDir, onEntry) {
                     } catch (psErr) {
                         throw new Error(`[FileUtils] Failed to read zip entries. Both 'tar' and 'powershell' failed or are unavailable. Error: ${psErr.message}`, { cause: psErr });
                     }
+                } finally {
+                    try {
+                        await fs.unlink(tempPath);
+                    } catch (err) {}
                 }
             } else {
                 const { stdout } = await runCommand('unzip', ['-Z1', archivePath]);
@@ -197,15 +223,43 @@ async function extractZip(archivePath, destDir, onEntry) {
 
 async function extractTarGz(archivePath, onEntry) {
     const destDir = path.dirname(archivePath);
-    const args = ['-xzf', archivePath, '-C', destDir];
-    if (process.platform === 'darwin') {
-        args.push('--no-mac-metadata', '--no-xattrs');
+    if (process.platform === 'win32') {
+        const tempName = `temp_extract_${crypto.randomBytes(6).toString('hex')}.tar.gz`;
+        const tempPath = path.join(destDir, tempName);
+        try {
+            await fs.copyFile(archivePath, tempPath);
+            await runCommand('tar', ['-xzf', tempName], { cwd: destDir });
+        } finally {
+            try {
+                await fs.unlink(tempPath);
+            } catch (err) {}
+        }
+    } else {
+        const args = ['-xzf', archivePath, '-C', destDir];
+        if (process.platform === 'darwin') {
+            args.push('--no-mac-metadata', '--no-xattrs');
+        }
+        await runCommand('tar', args);
     }
-    await runCommand('tar', args);
 
     if (onEntry) {
-        const { stdout } = await runCommand('tar', ['-tf', archivePath]);
-        const lines = stdout.toString().split('\n').filter(l => l.trim().length > 0);
+        let lines;
+        if (process.platform === 'win32') {
+            const tempName = `temp_list_${crypto.randomBytes(6).toString('hex')}.tar.gz`;
+            const tempPath = path.join(destDir, tempName);
+            try {
+                await fs.copyFile(archivePath, tempPath);
+                const { stdout } = await runCommand('tar', ['-tf', tempName], { cwd: destDir });
+                lines = stdout.toString().split('\n').filter(l => l.trim().length > 0);
+            } finally {
+                try {
+                    await fs.unlink(tempPath);
+                } catch (err) {}
+            }
+        } else {
+            const { stdout } = await runCommand('tar', ['-tf', archivePath]);
+            lines = stdout.toString().split('\n').filter(l => l.trim().length > 0);
+        }
         await onEntry({ name: lines[0] });
     }
 }
@@ -215,8 +269,12 @@ async function readFileFromZip(archivePath, entryName) {
     const entryPath = entryName.replace(/\\/g, '/');
 
     if (isWin) {
+        const destDir = path.dirname(archivePath);
+        const tempName = `temp_read_${crypto.randomBytes(6).toString('hex')}.zip`;
+        const tempPath = path.join(destDir, tempName);
         try {
-            const { stdout } = await runCommand('tar', ['-xOf', archivePath, entryPath]);
+            await fs.copyFile(archivePath, tempPath);
+            const { stdout } = await runCommand('tar', ['-xOf', tempName, entryPath], { cwd: destDir });
             return stdout;
         } catch (e) {
             const psCmd = `
@@ -235,6 +293,10 @@ async function readFileFromZip(archivePath, entryName) {
             } catch (psErr) {
                 throw new Error(`[FileUtils] Failed to read file from zip. Both 'tar' and 'powershell' failed or are unavailable. Error: ${psErr.message}`, { cause: psErr });
             }
+        } finally {
+            try {
+                await fs.unlink(tempPath);
+            } catch (err) {}
         }
     } else {
         const { stdout } = await runCommand('unzip', ['-p', archivePath, entryPath]);

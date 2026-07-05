@@ -386,7 +386,7 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
             if (assetPath) {
                 const dataDir = ConfigManager.getDataDirectory().trim();
                 const relPath = path.relative(dataDir, assetPath).replace(/\\/g, '/');
-                headers.append('X-File-Path', relPath);
+                headers.append('X-File-Path', encodeURIComponent(relPath));
             }
             if (asset.id) headers.append('X-File-Id', asset.id);
             if (hash) headers.append('X-File-Hash', hash);

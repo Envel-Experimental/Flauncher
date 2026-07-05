@@ -104,7 +104,13 @@ class RaceManager {
         let hash = null;
         try {
             const pathHeader = request.headers.get('X-File-Path');
-            if (pathHeader) relPath = pathHeader;
+            if (pathHeader) {
+                try {
+                    relPath = decodeURIComponent(pathHeader);
+                } catch (e) {
+                    relPath = pathHeader;
+                }
+            }
 
             const idHeader = request.headers.get('X-File-Id');
             if (idHeader) fileId = idHeader;
