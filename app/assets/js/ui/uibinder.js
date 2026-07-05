@@ -18,7 +18,7 @@ export let fatalStartupError = false
 // Mapping of each view to their container IDs.
 export const VIEWS = {
     landing: '#landingContainer',
-    loginOptions: '#loginOptionsContainer',
+    loginOptions: '#loginContainer',
     login: '#loginContainer',
     settings: '#settingsContainer',
     welcome: '#welcomeContainer',
@@ -153,7 +153,18 @@ export function updateSelectedAccount(authUser) {
         }
         if (authUser.uuid != null) {
             const avatarContainer = document.getElementById('avatarContainer')
-            if (avatarContainer) avatarContainer.style.backgroundImage = `url('https://mc-heads.net/body/${authUser.uuid}/right')`
+            if (avatarContainer) {
+                const { getCachedAvatar } = require('../core/util/AvatarCache')
+                const isOffline = authUser.accessToken === 'offline-access-token'
+                const identifier = (isOffline || !authUser.uuid) 
+                    ? (authUser.displayName || authUser.username || authUser.uuid) 
+                    : authUser.uuid
+                
+                const cachedUrl = getCachedAvatar(identifier, 'body', (newUrl) => {
+                    avatarContainer.style.backgroundImage = `url('${newUrl}')`
+                })
+                avatarContainer.style.backgroundImage = `url('${cachedUrl}')`
+            }
         }
     }
     const userText = document.getElementById('user_text')
@@ -301,7 +312,7 @@ export async function finishOnboarding() {
         console.log('[UIBinder] No logged in accounts. Jumping directly to nickname login.')
         loginCancelEnabled(false)
         window.loginViewOnSuccess = VIEWS.landing
-        window.loginViewOnCancel = VIEWS.loginOptions
+        window.loginViewOnCancel = VIEWS.login
         
         const nextView = VIEWS.login
         if (currentView) {
@@ -577,12 +588,12 @@ async function validateSelectedAccount() {
                         validateEmail(selectedAcc.username)
                     }
 
-                    window.loginOptionsViewOnLoginSuccess = getCurrentView()
-                    window.loginOptionsViewOnLoginCancel = VIEWS.loginOptions
+                    window.loginViewOnSuccess = getCurrentView()
+                    window.loginViewOnCancel = VIEWS.login
 
                     if (accLen > 0) {
-                        window.loginOptionsViewOnCancel = getCurrentView()
-                        window.loginOptionsViewCancelHandler = async () => {
+                        window.loginViewOnCancel = getCurrentView()
+                        window.loginViewCancelHandler = async () => {
                             if (isMicrosoft) {
                                 ConfigManager.addMicrosoftAuthAccount(
                                     selectedAcc.uuid,
@@ -599,12 +610,9 @@ async function validateSelectedAccount() {
                             await ConfigManager.save()
                             validateSelectedAccount()
                         }
-                        loginOptionsCancelEnabled(true)
-                    } else {
-                        loginOptionsCancelEnabled(false)
                     }
                     toggleOverlay(false)
-                    switchView(getCurrentView(), VIEWS.loginOptions)
+                    switchView(getCurrentView(), VIEWS.login)
                 })
                 setDismissHandler(() => {
                     if (accLen > 1) {
