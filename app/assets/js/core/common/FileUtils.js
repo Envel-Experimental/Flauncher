@@ -152,7 +152,7 @@ async function extractZip(archivePath, destDir, onEntry) {
 
     if (isWin) {
         await safeEnsureDir(destDir);
-        const tempName = `temp_extract_${crypto.randomBytes(6).toString('hex')}.zip`;
+        const tempName = `temp_extract_${Math.random().toString(36).substring(2, 8)}.zip`;
         const tempPath = path.join(destDir, tempName);
         try {
             await fs.copyFile(archivePath, tempPath);
@@ -180,7 +180,7 @@ async function extractZip(archivePath, destDir, onEntry) {
         let entries = [];
         try {
             if (isWin) {
-                const tempName = `temp_list_${crypto.randomBytes(6).toString('hex')}.zip`;
+                const tempName = `temp_list_${Math.random().toString(36).substring(2, 8)}.zip`;
                 const tempPath = path.join(destDir, tempName);
                 try {
                     await fs.copyFile(archivePath, tempPath);
@@ -224,7 +224,7 @@ async function extractZip(archivePath, destDir, onEntry) {
 async function extractTarGz(archivePath, onEntry) {
     const destDir = path.dirname(archivePath);
     if (process.platform === 'win32') {
-        const tempName = `temp_extract_${crypto.randomBytes(6).toString('hex')}.tar.gz`;
+        const tempName = `temp_extract_${Math.random().toString(36).substring(2, 8)}.tar.gz`;
         const tempPath = path.join(destDir, tempName);
         try {
             await fs.copyFile(archivePath, tempPath);
@@ -245,7 +245,7 @@ async function extractTarGz(archivePath, onEntry) {
     if (onEntry) {
         let lines;
         if (process.platform === 'win32') {
-            const tempName = `temp_list_${crypto.randomBytes(6).toString('hex')}.tar.gz`;
+            const tempName = `temp_list_${Math.random().toString(36).substring(2, 8)}.tar.gz`;
             const tempPath = path.join(destDir, tempName);
             try {
                 await fs.copyFile(archivePath, tempPath);
@@ -270,7 +270,7 @@ async function readFileFromZip(archivePath, entryName) {
 
     if (isWin) {
         const destDir = path.dirname(archivePath);
-        const tempName = `temp_read_${crypto.randomBytes(6).toString('hex')}.zip`;
+        const tempName = `temp_read_${Math.random().toString(36).substring(2, 8)}.zip`;
         const tempPath = path.join(destDir, tempName);
         try {
             await fs.copyFile(archivePath, tempPath);

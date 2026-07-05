@@ -24,7 +24,9 @@ describe('FileUtils', () => {
             mkdir: jest.fn().mockResolvedValue(undefined),
             stat: jest.fn().mockResolvedValue({ size: 100 }),
             readFile: jest.fn().mockResolvedValue('test content'),
-            rename: jest.fn().mockResolvedValue(undefined)
+            rename: jest.fn().mockResolvedValue(undefined),
+            copyFile: jest.fn().mockResolvedValue(undefined),
+            unlink: jest.fn().mockResolvedValue(undefined)
         }))
 
         jest.doMock('fs', () => {
