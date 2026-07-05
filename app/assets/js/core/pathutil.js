@@ -50,6 +50,24 @@ function getDefaultDataPath(app) {
     return path.join(sysRoot, '.foxford')
 }
 
+const { execSync } = require('child_process')
+
+function toShortPath(p) {
+    if (process.platform !== 'win32') return p
+    try {
+        fs.mkdirSync(p, { recursive: true })
+        const cmd = `powershell -NoProfile -Command "(New-Object -ComObject Scripting.FileSystemObject).GetFolder('${p}').ShortPath"`;
+        const short = execSync(cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+        if (short) return short;
+    } catch (e) {
+        try {
+            const short = execSync(`cmd.exe /c "for %I in ("${p}") do @echo %~sI"`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+            if (short) return short;
+        } catch (err) {}
+    }
+    return p;
+}
+
 /**
  * Resolves the data directory for the application.
  * Deprecated: Root C: fallback has been removed to avoid permission issues and comply with security best practices.
@@ -60,18 +78,18 @@ function getDefaultDataPath(app) {
 async function resolveDataPath(app) {
     const defaultPath = getDefaultDataPath(app)
     await fs.promises.mkdir(defaultPath, { recursive: true })
-    return defaultPath
+    return toShortPath(defaultPath)
 }
 
 function resolveDataPathSync(app) {
     const defaultPath = getDefaultDataPath(app)
     fs.mkdirSync(defaultPath, { recursive: true })
-    return defaultPath
+    return toShortPath(defaultPath)
 }
 
 function getFallbackDataPath() {
     const sysRoot = process.env.APPDATA || (process.platform === 'darwin' ? path.join(process.env.HOME, 'Library', 'Application Support') : process.env.HOME)
-    return path.join(sysRoot, '.foxford')
+    return toShortPath(path.join(sysRoot, '.foxford'))
 }
 
 module.exports = {
@@ -81,5 +99,6 @@ module.exports = {
     getDefaultDataPath,
     getFallbackDataPath,
     resolveDataPath,
-    resolveDataPathSync
+    resolveDataPathSync,
+    toShortPath
 }

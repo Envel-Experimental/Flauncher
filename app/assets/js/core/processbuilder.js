@@ -233,9 +233,6 @@ class ProcessBuilder {
         logger.info('Using fabric loader:', this.usingFabricLoader)
     }
 
-    /**
-     * Setup a temporary directory for native library extraction.
-     */
     _setupTempNatives() {
         const currentSystemTemp = os.tmpdir()
         let nativeBasePath = currentSystemTemp
@@ -249,7 +246,8 @@ class ProcessBuilder {
                 nativeBasePath = currentSystemTemp
             }
         }
-        return path.join(nativeBasePath, ConfigManager.getTempNativeFolder(), crypto.randomBytes(16).toString('hex'))
+        const finalPath = path.join(nativeBasePath, ConfigManager.getTempNativeFolder(), crypto.randomBytes(16).toString('hex'))
+        return pathutil.toShortPath(finalPath)
     }
 
     /**
