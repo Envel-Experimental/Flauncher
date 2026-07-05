@@ -164,7 +164,7 @@ describe('ProcessBuilder', () => {
         const mockArgs = [
             `-Djava.library.path=${path.join(gameDir, 'natives')}`,
             '-cp',
-            `${path.join(commonDir, 'libraries', 'foo.jar')}${path.delimiter}${path.join(gameDir, 'bar.jar')}`,
+            `${path.join(commonDir, 'libraries', 'foo.jar')};${path.join(gameDir, 'bar.jar')}`,
             `@${path.join(gameDir, 'argfile')}`,
             '--gameDir',
             gameDir,
@@ -184,7 +184,7 @@ describe('ProcessBuilder', () => {
         const spawnCallArgs = mockSpawn.mock.calls[mockSpawn.mock.calls.length - 1][1]
         
         expect(spawnCallArgs[0]).toBe('-Djava.library.path=natives')
-        expect(spawnCallArgs[2]).toBe(`${path.relative(gameDir, path.join(commonDir, 'libraries', 'foo.jar'))}${path.delimiter}bar.jar`)
+        expect(spawnCallArgs[2]).toBe(`${path.relative(gameDir, path.join(commonDir, 'libraries', 'foo.jar'))};bar.jar`)
         expect(spawnCallArgs[3]).toBe('@argfile')
         expect(spawnCallArgs[4]).toBe('--gameDir')
         expect(spawnCallArgs[5]).toBe('.')
