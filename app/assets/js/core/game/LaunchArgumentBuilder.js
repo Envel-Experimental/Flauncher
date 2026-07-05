@@ -148,6 +148,11 @@ class LaunchArgumentBuilder {
         jvmArgs.push('-Dio.netty.native.workdir=' + path.resolve(tempNativePath))
         jvmArgs.push('-Dminecraft.launcher.brand=FLauncher')
         jvmArgs.push('-Dminecraft.launcher.version=' + this.launcherVersion)
+        
+        // Ensure JVM and native library loaders (JNA, etc.) parse Cyrillic paths correctly
+        jvmArgs.push('-Dfile.encoding=UTF-8')
+        jvmArgs.push('-Dsun.jnu.encoding=UTF-8')
+        jvmArgs.push('-Djna.encoding=UTF-8')
 
         const extraJvmArgs = this._resolveSanitizedJMArgs(jvmArgs)
         jvmArgs = jvmArgs.concat(extraJvmArgs)
