@@ -140,6 +140,41 @@ describe('ProcessBuilder', () => {
         )
     })
 
+    it('should relativize absolute paths on win32', async () => {
+        const os = require('os')
+        os.platform.mockReturnValue('win32')
+
+        const ConfigManager = require('../../../../../../app/assets/js/core/configmanager')
+        ConfigManager.getInstanceDirectorySync.mockReturnValue('C:\\Users\\Тестовый Юзер\\instances')
+        ConfigManager.getCommonDirectorySync.mockReturnValue('C:\\Users\\Тестовый Юзер\\common')
+
+        builder = new ProcessBuilder(mockDistro, {}, {}, mockAuth, '1.0.0')
+
+        // Mock constructJVMArguments to return absolute paths
+        const mockArgs = [
+            '-Djava.library.path=C:\\Users\\Тестовый Юзер\\instances\\test-server\\natives',
+            '-cp',
+            'C:\\Users\\Тестовый Юзер\\common\\libraries\\foo.jar;C:\\Users\\Тестовый Юзер\\instances\\test-server\\bar.jar',
+            '@C:\\Users\\Тестовый Юзер\\instances\\test-server\\argfile',
+            '--gameDir',
+            'C:\\Users\\Тестовый Юзер\\instances\\test-server',
+            '-Dfabric.addMods=C:\\Users\\Тестовый Юзер\\common\\mods\\sodium.jar'
+        ]
+        builder.argBuilder.constructJVMArguments = jest.fn().mockResolvedValueOnce(mockArgs)
+
+        await builder.build()
+
+        // Verify the arguments passed to spawn are relative
+        const spawnCallArgs = mockSpawn.mock.calls[mockSpawn.mock.calls.length - 1][1]
+        
+        expect(spawnCallArgs[0]).toBe('-Djava.library.path=natives')
+        expect(spawnCallArgs[2]).toBe('..\\..\\common\\libraries\\foo.jar;bar.jar')
+        expect(spawnCallArgs[3]).toBe('@argfile')
+        expect(spawnCallArgs[4]).toBe('--gameDir')
+        expect(spawnCallArgs[5]).toBe('.')
+        expect(spawnCallArgs[6]).toBe('-Dfabric.addMods=..\\..\\common\\mods\\sodium.jar')
+    })
+
     it('should handle process exit', async () => {
         const child = await builder.build()
         const closeHandler = mockChild.on.mock.calls.find(call => call[0] === 'close')[1]

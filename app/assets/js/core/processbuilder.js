@@ -130,7 +130,7 @@ class ProcessBuilder {
                 const makeRelative = (p) => {
                     if (path.isAbsolute(p)) {
                         if (p.startsWith(this.gameDir) || p.startsWith(this.commonDir)) {
-                            return path.relative(this.gameDir, p)
+                            return path.relative(this.gameDir, p) || '.'
                         }
                     }
                     return p
