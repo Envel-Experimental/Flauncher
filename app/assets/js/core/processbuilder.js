@@ -121,9 +121,42 @@ class ProcessBuilder {
         const { ensureDecodedPath } = require('./util/NodeUtil')
         this.javaPath = ensureDecodedPath(ConfigManager.getJavaExecutable(this.server.rawServer.id))
         const javaPath = this.javaPath
-        this.args = args
+        
+        let finalArgs = args
+        if (process.platform === 'win32') {
+            finalArgs = args.map(arg => {
+                if (typeof arg !== 'string') return arg
+                
+                const makeRelative = (p) => {
+                    if (path.isAbsolute(p)) {
+                        if (p.startsWith(this.gameDir) || p.startsWith(this.commonDir)) {
+                            return path.relative(this.gameDir, p)
+                        }
+                    }
+                    return p
+                }
 
-        const sanitizedArgs = args.filter(arg => arg != null).map((arg, index, arr) => {
+                if (arg.includes(';')) {
+                    return arg.split(';').map(makeRelative).join(';')
+                }
+
+                if (arg.startsWith('@') && path.isAbsolute(arg.substring(1))) {
+                    return '@' + makeRelative(arg.substring(1))
+                }
+
+                if (arg.startsWith('-D') && arg.includes('=')) {
+                    const eqIdx = arg.indexOf('=')
+                    const key = arg.substring(0, eqIdx)
+                    const val = arg.substring(eqIdx + 1)
+                    return key + '=' + makeRelative(val)
+                }
+
+                return makeRelative(arg)
+            })
+        }
+        this.args = finalArgs
+
+        const sanitizedArgs = finalArgs.filter(arg => arg != null).map((arg, index, arr) => {
             if (index > 0 && (arr[index - 1] === '--accessToken' || arr[index - 1] === '--uuid')) return '***'
             return arg
         })
@@ -141,7 +174,7 @@ class ProcessBuilder {
             throw new Error('Проблема с доступом к файлам Java (недостаточно прав).', { cause: e })
         }
 
-        const child = child_process.spawn(javaPath, args, {
+        const child = child_process.spawn(javaPath, finalArgs, {
             cwd: this.gameDir,
             detached: ConfigManager.getLaunchDetached()
         })
