@@ -1,4 +1,5 @@
 const { fileURLToPath } = require('url');
+const os = require('os');
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -19,7 +20,7 @@ function ensureDecodedPath(path) {
         }
         catch (e) {
             const strippedPath = path.substring(path.startsWith('file:///') ? 8 : 7);
-            if (process.platform === 'win32') {
+            if (os.platform() === 'win32') {
                 if (strippedPath.startsWith('/'))
                     return strippedPath;
                 return strippedPath.replace(/\//g, '\\');
@@ -27,7 +28,7 @@ function ensureDecodedPath(path) {
             return strippedPath;
         }
     }
-    if (process.platform === 'win32') {
+    if (os.platform() === 'win32') {
         if (path.startsWith('/')) {
             return path;
         }

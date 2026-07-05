@@ -1,4 +1,12 @@
 // Mock dependencies at the very top
+jest.mock('os', () => {
+    const actualOs = jest.requireActual('os')
+    return {
+        ...actualOs,
+        platform: jest.fn().mockReturnValue('win32')
+    }
+})
+
 jest.mock('../../../../app/assets/js/core/common/MojangUtils', () => ({
     getMojangOS: jest.fn().mockReturnValue('windows'),
     isLibraryCompatible: jest.fn().mockReturnValue(true),
@@ -99,8 +107,8 @@ describe('LaunchArgumentBuilder', () => {
         })
 
         it('should ensure all paths use system separators on Windows', async () => {
-            const originalPlatform = process.platform
-            Object.defineProperty(process, 'platform', { value: 'win32' })
+            const os = require('os')
+            os.platform.mockReturnValue('win32')
             
             builder._resolveServerLibraries = jest.fn().mockReturnValue({
                 'some-library': 'C:/Users/Тестовый Юзер/AppData/Roaming/.foxford/library.jar'
@@ -116,8 +124,6 @@ describe('LaunchArgumentBuilder', () => {
             const targetPath = cp.find(p => p.includes('Тестовый Юзер'))
             expect(targetPath).toBeDefined()
             expect(targetPath).toBe('C:\\Users\\Тестовый Юзер\\AppData\\Roaming\\.foxford\\library.jar')
-            
-            Object.defineProperty(process, 'platform', { value: originalPlatform })
         })
     })
 })

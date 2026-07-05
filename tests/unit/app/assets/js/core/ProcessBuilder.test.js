@@ -1,5 +1,16 @@
 const path = require('path')
 
+jest.mock('os', () => {
+    const actualOs = jest.requireActual('os')
+    return {
+        ...actualOs,
+        hostname: jest.fn().mockReturnValue('test-host'),
+        totalmem: jest.fn().mockReturnValue(16 * 1024 * 1024 * 1024), // 16GB
+        userInfo: jest.fn().mockReturnValue({ username: 'mock' }),
+        platform: jest.fn().mockReturnValue('win32')
+    }
+})
+
 // Mock fs
 const mockFs = {
     mkdirSync: jest.fn(),
@@ -115,8 +126,8 @@ describe('ProcessBuilder', () => {
     })
 
     it('should normalize javaPath to use backslashes on Windows', async () => {
-        const originalPlatform = process.platform
-        Object.defineProperty(process, 'platform', { value: 'win32' })
+        const os = require('os')
+        os.platform.mockReturnValue('win32')
         
         const ConfigManager = require('../../../../../../app/assets/js/core/configmanager')
         ConfigManager.getJavaExecutable.mockReturnValueOnce('C:/Users/Тестовый Юзер/AppData/Local/Java/javaw.exe')
@@ -127,8 +138,6 @@ describe('ProcessBuilder', () => {
             expect.any(Array),
             expect.any(Object)
         )
-        
-        Object.defineProperty(process, 'platform', { value: originalPlatform })
     })
 
     it('should handle process exit', async () => {

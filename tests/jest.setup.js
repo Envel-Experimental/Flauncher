@@ -55,7 +55,7 @@ jest.mock('os', () => ({
   cpus: () => [{}, {}, {}, {}],
   loadavg: () => [0.1, 0.2, 0.5],
   tmpdir: () => require('path').join(__dirname, '..', 'test-data', 'temp'),
-  platform: () => 'win32',
+  platform: jest.fn().mockReturnValue('win32'),
   arch: () => 'x64',
   homedir: () => require('path').join(__dirname, '..', 'test-data'),
   release: () => '10.0.19041',
