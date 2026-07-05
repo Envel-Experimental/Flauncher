@@ -141,38 +141,54 @@ describe('ProcessBuilder', () => {
     })
 
     it('should relativize absolute paths on win32', async () => {
+        const originalPlatform = process.platform
+        Object.defineProperty(process, 'platform', {
+            value: 'win32',
+            configurable: true
+        })
+
         const os = require('os')
         os.platform.mockReturnValue('win32')
 
+        const instanceDir = path.resolve('/mock/Тестовый Юзер/instances')
+        const commonDir = path.resolve('/mock/Тестовый Юзер/common')
+        const gameDir = path.join(instanceDir, 'test-server')
+
         const ConfigManager = require('../../../../../../app/assets/js/core/configmanager')
-        ConfigManager.getInstanceDirectorySync.mockReturnValue('C:\\Users\\Тестовый Юзер\\instances')
-        ConfigManager.getCommonDirectorySync.mockReturnValue('C:\\Users\\Тестовый Юзер\\common')
+        ConfigManager.getInstanceDirectorySync.mockReturnValue(instanceDir)
+        ConfigManager.getCommonDirectorySync.mockReturnValue(commonDir)
 
         builder = new ProcessBuilder(mockDistro, {}, {}, mockAuth, '1.0.0')
 
         // Mock constructJVMArguments to return absolute paths
         const mockArgs = [
-            '-Djava.library.path=C:\\Users\\Тестовый Юзер\\instances\\test-server\\natives',
+            `-Djava.library.path=${path.join(gameDir, 'natives')}`,
             '-cp',
-            'C:\\Users\\Тестовый Юзер\\common\\libraries\\foo.jar;C:\\Users\\Тестовый Юзер\\instances\\test-server\\bar.jar',
-            '@C:\\Users\\Тестовый Юзер\\instances\\test-server\\argfile',
+            `${path.join(commonDir, 'libraries', 'foo.jar')}${path.delimiter}${path.join(gameDir, 'bar.jar')}`,
+            `@${path.join(gameDir, 'argfile')}`,
             '--gameDir',
-            'C:\\Users\\Тестовый Юзер\\instances\\test-server',
-            '-Dfabric.addMods=C:\\Users\\Тестовый Юзер\\common\\mods\\sodium.jar'
+            gameDir,
+            `-Dfabric.addMods=${path.join(commonDir, 'mods', 'sodium.jar')}`
         ]
         builder.argBuilder.constructJVMArguments = jest.fn().mockResolvedValueOnce(mockArgs)
 
         await builder.build()
 
+        // Restore process.platform
+        Object.defineProperty(process, 'platform', {
+            value: originalPlatform,
+            configurable: true
+        })
+
         // Verify the arguments passed to spawn are relative
         const spawnCallArgs = mockSpawn.mock.calls[mockSpawn.mock.calls.length - 1][1]
         
         expect(spawnCallArgs[0]).toBe('-Djava.library.path=natives')
-        expect(spawnCallArgs[2]).toBe('..\\..\\common\\libraries\\foo.jar;bar.jar')
+        expect(spawnCallArgs[2]).toBe(`${path.relative(gameDir, path.join(commonDir, 'libraries', 'foo.jar'))}${path.delimiter}bar.jar`)
         expect(spawnCallArgs[3]).toBe('@argfile')
         expect(spawnCallArgs[4]).toBe('--gameDir')
         expect(spawnCallArgs[5]).toBe('.')
-        expect(spawnCallArgs[6]).toBe('-Dfabric.addMods=..\\..\\common\\mods\\sodium.jar')
+        expect(spawnCallArgs[6]).toBe(`-Dfabric.addMods=${path.relative(gameDir, path.join(commonDir, 'mods', 'sodium.jar'))}`)
     })
 
     it('should handle process exit', async () => {
