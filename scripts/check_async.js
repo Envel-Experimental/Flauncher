@@ -80,6 +80,7 @@ function walk(dir) {
 
 console.log('Starting async call check...');
 walk('./app');
+walk('./network');
 walk('./index.js');
 
 if (errorCount > 0) {

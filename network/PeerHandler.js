@@ -1020,7 +1020,7 @@ class PeerHandler {
     _isPathSecure(filePath) {
         try {
             const dataDir = ConfigManager.getDataDirectory().trim()
-            const commonDir = ConfigManager.getCommonDirectory().trim()
+            const commonDir = ConfigManager.getCommonDirectorySync().trim()
             // console.log(`[_isPathSecure] filePath: ${filePath}, dataDir: ${dataDir}, commonDir: ${commonDir}`)
 
             // Check Data Dir
@@ -1093,7 +1093,7 @@ class PeerHandler {
                 // Re-attempt resolution if they failed in constructor (unlikely but safe)
                 try {
                     const dataDir = ConfigManager.getDataDirectory().trim()
-                    const commonDir = ConfigManager.getCommonDirectory().trim()
+                    const commonDir = ConfigManager.getCommonDirectorySync().trim()
                     
                     if (fs.existsSync(dataDir)) {
                         this.dataDirReal = fs.realpathSync(dataDir)

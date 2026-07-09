@@ -30,6 +30,7 @@ describe('PeerHandler Security', () => {
         jest.mock('../../app/assets/js/core/configmanager', () => ({
             getDataDirectory: jest.fn(() => '/game/data'),
             getCommonDirectory: jest.fn(() => '/game/common'),
+            getCommonDirectorySync: jest.fn(() => '/game/common'),
             getLauncherDirectorySync: jest.fn(() => '/game/launcher'),
             getP2PUploadEnabled: jest.fn(),
             getLocalOptimization: jest.fn(),
