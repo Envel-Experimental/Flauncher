@@ -13,6 +13,7 @@ asarUnpack:
   - "**/*.bare"
   - "**/sodium-native/prebuilds/**"
   - "**/udx-native/prebuilds/**"
+  - "**/b4a/**"
 
 files:
   - 'index.js'
