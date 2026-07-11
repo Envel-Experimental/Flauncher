@@ -73,9 +73,14 @@ class DistributionIndexProcessor extends IndexProcessor {
                 let hash = artifact.SHA256;
                 let algo = HashAlgo.SHA256;
 
-                // Skip validation for anything in 'instances' - these are user-mutable
+                // Skip validation for anything in 'instances' - these are user-mutable, but only if they exist!
                 if (!module.rawModule.force && modulePath.replace(/\\/g, '/').includes('/instances/')) {
-                    return null;
+                    try {
+                        await fs.access(modulePath);
+                        return null;
+                    } catch (e) {
+                        // File is missing, let it proceed to download
+                    }
                 }
 
                 if (!await validateLocalFile(modulePath, algo, hash, artifact.size)) {

@@ -4,6 +4,9 @@ const FileUtils = require('../../../../app/assets/js/core/common/FileUtils');
 
 jest.mock('../../../../network/MirrorManager');
 jest.mock('../../../../app/assets/js/core/common/FileUtils');
+jest.mock('fs/promises', () => ({
+    access: jest.fn().mockRejectedValue(new Error('ENOENT'))
+}));
 
 describe('DistributionIndexProcessor', () => {
     let processor;
@@ -148,6 +151,30 @@ describe('DistributionIndexProcessor', () => {
             expect(results[0].fallbackUrls).toEqual([
                 'http://localhost///weird//path.jar'
             ]);
+        });
+    });
+
+    describe('Instances Directory Validation', () => {
+        const fs = require('fs/promises');
+
+        it('should download a file inside instances if it does not exist on disk', async () => {
+            mockModule.getPath.mockReturnValue('mock/instances/options.txt');
+            fs.access.mockRejectedValueOnce(new Error('ENOENT')); // File doesn't exist
+            FileUtils.validateLocalFile.mockResolvedValue(false);
+
+            const results = await processor.validateModules([mockModule]);
+
+            expect(results.length).toBe(1);
+            expect(results[0].id).toBe('test-module');
+        });
+
+        it('should skip downloading a file inside instances if it already exists on disk', async () => {
+            mockModule.getPath.mockReturnValue('mock/instances/options.txt');
+            fs.access.mockResolvedValueOnce(undefined); // File exists
+
+            const results = await processor.validateModules([mockModule]);
+
+            expect(results.length).toBe(0); // Skipped validation and download
         });
     });
 });
