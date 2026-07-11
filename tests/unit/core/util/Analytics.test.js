@@ -51,6 +51,7 @@ describe('Analytics', () => {
         testError.stack = 'ENOSPC: Disk full\n    at exports.save (app/assets/js/core/configmanager.js:326:15)'
         
         await Analytics.captureException(testError)
+        await Analytics.flush()
 
         const callArgs = JSON.parse(fetch.mock.calls[0][1].body)
         const event = callArgs.batch[0]
@@ -82,6 +83,7 @@ describe('Analytics', () => {
         })
 
         await Analytics.init()
+        await Analytics.flush()
 
         expect(Analytics.distinctId).toBe('existing-token')
         
@@ -90,7 +92,8 @@ describe('Analytics', () => {
         expect(call).toBeDefined()
         
         const body = JSON.parse(call[1].body)
-        const event = body.batch[0]
+        const event = body.batch.find(e => e.event === 'Launcher Loaded')
+        expect(event).toBeDefined()
         expect(event.properties.$set).toBeDefined()
         expect(event.properties.$set.os_platform).toBe('win32')
         expect(event.properties.$set.launcher_version).toBe('1.1.0')
@@ -98,6 +101,7 @@ describe('Analytics', () => {
 
     test('capture should include library info and os', async () => {
         await Analytics.capture('Test Event', { prop: 'val' })
+        await Analytics.flush()
 
         const body = JSON.parse(global.fetch.mock.calls[0][1].body)
         const event = body.batch[0]
@@ -112,6 +116,7 @@ describe('Analytics', () => {
         const stringStack = 'TypeError: Cannot read property foo of undefined\n    at RenderView.render (app/assets/js/ui/views/landing.js:45:12)\n    at init (app/assets/js/renderer-entry.js:140:10)'
         
         await Analytics.captureException(stringStack)
+        await Analytics.flush()
 
         const callArgs = JSON.parse(fetch.mock.calls[0][1].body)
         const event = callArgs.batch[0]
