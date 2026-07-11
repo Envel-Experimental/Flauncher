@@ -262,6 +262,18 @@ class HeliosModule {
         return this.mavenComponents;
     }
     getRequired() {
+        try {
+            const isRenderer = typeof process !== 'undefined' && process.type === 'renderer';
+            const isDev = isRenderer ? window.isDev : (require('electron').app ? !require('electron').app.isPackaged : false);
+            if (isDev) {
+                return {
+                    value: false,
+                    def: this.required ? this.required.def : false
+                };
+            }
+        } catch (e) {
+            // Ignore environment check errors
+        }
         return this.required;
     }
     getPath() {
