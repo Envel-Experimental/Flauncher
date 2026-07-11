@@ -176,5 +176,28 @@ describe('DistributionIndexProcessor', () => {
 
             expect(results.length).toBe(0); // Skipped validation and download
         });
+
+        it('should download an untracked file (no SHA256) if it does not exist on disk', async () => {
+            mockModule.rawModule.artifact.SHA256 = undefined; // Untracked (no hash)
+            mockModule.getPath.mockReturnValue('mock/instances/options.txt');
+            fs.access.mockRejectedValueOnce(new Error('ENOENT')); // File doesn't exist
+            FileUtils.validateLocalFile.mockResolvedValue(false);
+
+            const results = await processor.validateModules([mockModule]);
+
+            expect(results.length).toBe(1);
+            expect(results[0].hash).toBeNull();
+            expect(results[0].algo).toBeNull();
+        });
+
+        it('should skip downloading an untracked file (no SHA256) if it exists on disk', async () => {
+            mockModule.rawModule.artifact.SHA256 = undefined; // Untracked (no hash)
+            mockModule.getPath.mockReturnValue('mock/instances/options.txt');
+            fs.access.mockResolvedValueOnce(undefined); // File exists
+
+            const results = await processor.validateModules([mockModule]);
+
+            expect(results.length).toBe(0);
+        });
     });
 });

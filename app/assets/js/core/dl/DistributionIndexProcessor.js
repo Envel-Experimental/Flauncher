@@ -65,16 +65,17 @@ class DistributionIndexProcessor extends IndexProcessor {
                 const modulePath = module.getPath();
                 const artifact = module.rawModule ? module.rawModule.artifact : null;
                 
-                if (!artifact || !artifact.SHA256) {
-                    // No supported hash found (SHA256 required). Skip validation.
+                if (!artifact) {
                     return null;
                 }
 
-                let hash = artifact.SHA256;
-                let algo = HashAlgo.SHA256;
+                let hash = artifact.SHA256 || null;
+                let algo = hash ? HashAlgo.SHA256 : null;
 
-                // Skip validation for anything in 'instances' - these are user-mutable, but only if they exist!
-                if (!module.rawModule.force && modulePath.replace(/\\/g, '/').includes('/instances/')) {
+                const isUntracked = !hash;
+                const isUserMutable = !module.rawModule.force && modulePath.replace(/\\/g, '/').includes('/instances/');
+
+                if (isUntracked || isUserMutable) {
                     try {
                         await fs.access(modulePath);
                         return null;
