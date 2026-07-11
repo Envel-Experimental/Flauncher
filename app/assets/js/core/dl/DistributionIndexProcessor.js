@@ -80,8 +80,31 @@ class DistributionIndexProcessor extends IndexProcessor {
 
                 if (!await validateLocalFile(modulePath, algo, hash, artifact.size)) {
                     const fallbackUrls = [];
-                    const url = artifact.url;
-                    if (url) {
+                    let url = artifact.url;
+                    const relUrl = artifact.relUrl;
+
+                    if (relUrl) {
+                        const sortedMirrors = MirrorManager.getSortedMirrors();
+                        let first = true;
+                        for (const mirror of sortedMirrors) {
+                            if (mirror.distribution) {
+                                let base = mirror.distribution;
+                                const lastSlash = base.lastIndexOf('/');
+                                // If the URL has a path (slash after the double slash of http://)
+                                if (lastSlash > 7) {
+                                    base = base.substring(0, lastSlash);
+                                }
+                                const cleanRelUrl = relUrl.startsWith('/') ? relUrl : '/' + relUrl;
+                                const fullUrl = base + cleanRelUrl;
+                                if (first) {
+                                    url = fullUrl;
+                                    first = false;
+                                } else {
+                                    fallbackUrls.push(fullUrl);
+                                }
+                            }
+                        }
+                    } else if (url) {
                         const sortedMirrors = MirrorManager.getSortedMirrors();
                         for (const mirror of sortedMirrors) {
                             if (mirror.distribution) {

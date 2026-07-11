@@ -262,11 +262,20 @@ async function latestOpenJDK(major, dataDir, distribution) {
 
                 if (manifest[os] && manifest[os][arch] && manifest[os][arch][field]) {
                     const entry = manifest[os][arch][field]
+                    
+                    let resolvedUrl = entry.url
+                    if (entry.relUrl && mirror.java_manifest) {
+                        const lastSlash = mirror.java_manifest.lastIndexOf('/');
+                        const base = lastSlash > 7 ? mirror.java_manifest.substring(0, lastSlash) : mirror.java_manifest;
+                        const cleanRelUrl = entry.relUrl.startsWith('/') ? entry.relUrl : '/' + entry.relUrl;
+                        resolvedUrl = base + cleanRelUrl;
+                    }
+
                     return {
                         source: `Mirror (${mirror.name})`,
                         latency: Date.now() - start,
                         data: {
-                            url: entry.url,
+                            url: resolvedUrl,
                             size: entry.size,
                             id: entry.name,
                             hash: entry.sha1,

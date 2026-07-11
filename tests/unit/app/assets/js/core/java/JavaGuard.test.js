@@ -142,4 +142,72 @@ describe('JavaGuard', () => {
 
         expect(result.url).toBe('https://adoptium.net/jdk21.zip')
     })
+
+    it('should use relUrl when provided to support dual distribution and relative paths', async () => {
+        const mirrorUrl = 'https://s3.custom.mirror/java/manifest.json'
+        const sigUrl = mirrorUrl + '.sig'
+        require('@network/config').MOJANG_MIRRORS = [{
+            name: 'Dual Support Mirror',
+            java_manifest: mirrorUrl
+        }]
+        
+        const { verifyDistribution } = require('@app/assets/js/core/util/SignatureUtils')
+        verifyDistribution.mockReturnValue(true) // Valid signature
+
+        global.fetch = jest.fn((url) => {
+            if (url === mirrorUrl) {
+                const data = { windows: { x64: { "21": { url: 'https://ignored.url/j21.zip', relUrl: 'archives/jdk-21.zip', size: 100, name: 'j21.zip', sha1: 'h' } } } }
+                return Promise.resolve({
+                    ok: true,
+                    arrayBuffer: async () => Buffer.from(JSON.stringify(data)),
+                    json: async () => data
+                })
+            }
+            if (url === sigUrl) {
+                return Promise.resolve({ ok: true, text: async () => 'valid-sig-hex' })
+            }
+            return Promise.resolve({ ok: false })
+        })
+
+        const { latestOpenJDK } = require('@app/assets/js/core/java/JavaGuard')
+        const result = await latestOpenJDK(21, 'dataDir', null)
+
+        expect(result.url).toBe('https://s3.custom.mirror/java/archives/jdk-21.zip')
+    })
+
+    it('should correctly handle slashes when joining mirror base and relUrl', async () => {
+        const mirrorUrl = 'https://s3.custom.mirror/java-path/manifest.json'
+        const sigUrl = mirrorUrl + '.sig'
+        require('@network/config').MOJANG_MIRRORS = [{
+            name: 'Dual Support Mirror 2',
+            java_manifest: mirrorUrl
+        }]
+        
+        const { verifyDistribution } = require('@app/assets/js/core/util/SignatureUtils')
+        verifyDistribution.mockReturnValue(true)
+
+        global.fetch = jest.fn((url) => {
+            if (url === mirrorUrl) {
+                // relUrl has a leading slash
+                const data = { windows: { x64: { "21": { url: 'old', relUrl: '/archives/jdk-21.zip', size: 100, name: 'j', sha1: 'h' } } } }
+                return Promise.resolve({
+                    ok: true,
+                    arrayBuffer: async () => Buffer.from(JSON.stringify(data)),
+                    json: async () => data
+                })
+            }
+            if (url === sigUrl) {
+                return Promise.resolve({ ok: true, text: async () => 'valid-sig-hex' })
+            }
+            return Promise.resolve({ ok: false })
+        })
+
+        const { latestOpenJDK } = require('@app/assets/js/core/java/JavaGuard')
+        const result = await latestOpenJDK(21, 'dataDir', null)
+
+        // base is https://s3.custom.mirror/java-path (no trailing slash)
+        // relUrl is /archives/jdk-21.zip (leading slash)
+        // Result must have exactly one slash between them
+        expect(result.url).toBe('https://s3.custom.mirror/java-path/archives/jdk-21.zip')
+    })
 })
