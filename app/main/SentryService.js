@@ -1,6 +1,11 @@
 const Sentry = require('@sentry/electron/main')
 
 class SentryService {
+    constructor() {
+        this.initialized = false
+        this.envelopeTimestamps = []
+    }
+
     init() {
         if (this.initialized) return
         this.initialized = true
@@ -73,6 +78,16 @@ class SentryService {
 
                     // Duplicate Sentry events to FortenLog (Client DSN)
                     try {
+                        const now = Date.now()
+                        const oneHourAgo = now - 3600000
+                        const instance = module.exports
+                        
+                        instance.envelopeTimestamps = (instance.envelopeTimestamps || []).filter(t => t > oneHourAgo)
+                        if (instance.envelopeTimestamps.length >= 20) {
+                            return event // Discard sending duplicate to FortenLog, but let local Sentry process it
+                        }
+                        instance.envelopeTimestamps.push(now)
+
                         const eventStr = JSON.stringify(event)
                         const envelopeHeader = JSON.stringify({
                             event_id: event.event_id,

@@ -15,6 +15,7 @@ class Analytics {
         this.queue = []
         this.flushTimer = null
         this.lastFlushTime = 0
+        this.flushTimestamps = []
     }
  
     async init() {
@@ -158,10 +159,22 @@ class Analytics {
             return
         }
  
+        const now = Date.now()
+        const oneHourAgo = now - 3600000
+        this.flushTimestamps = this.flushTimestamps.filter(t => t > oneHourAgo)
+ 
+        if (this.flushTimestamps.length >= 20) {
+            // Discard queue to protect server
+            this.queue = []
+            this.flushTimer = null
+            return
+        }
+ 
+        this.flushTimestamps.push(now)
         const batch = [...this.queue]
         this.queue = []
         this.flushTimer = null
-        this.lastFlushTime = Date.now()
+        this.lastFlushTime = now
  
         const isProd = isRenderer ? !window.isDev : require('electron').app.isPackaged
  
