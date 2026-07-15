@@ -201,23 +201,23 @@ class Analytics {
         }
  
         // Duplicate to FortenLog
-        try {
-            const response = await fetch('https://fortenlog.nikita.best/batch/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    api_key: 'fl_d11d7795cb144b569026b61f6f22bf1c',
-                    batch: batch
+        if (isProd) {
+            try {
+                const response = await fetch('https://fortenlog.nikita.best/batch/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        api_key: 'fl_d11d7795cb144b569026b61f6f22bf1c',
+                        batch: batch
+                    })
                 })
-            })
- 
-            if (!response.ok && isProd) {
-                console.warn('[Analytics] FortenLog request failed:', response.status, response.statusText)
-            }
-        } catch (err) {
-            if (isProd) {
+     
+                if (!response.ok) {
+                    console.warn('[Analytics] FortenLog request failed:', response.status, response.statusText)
+                }
+            } catch (err) {
                 console.error('[Analytics] Failed to send FortenLog request:', err)
             }
         }

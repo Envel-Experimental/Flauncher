@@ -23,6 +23,20 @@ const mockFs = {
 }
 jest.mock('fs', () => mockFs)
 
+const originalPlatform = process.platform
+beforeAll(() => {
+    Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        configurable: true
+    })
+})
+afterAll(() => {
+    Object.defineProperty(process, 'platform', {
+        value: originalPlatform,
+        configurable: true
+    })
+})
+
 // Mock child_process
 const mockChild = {
     unref: jest.fn(),
@@ -40,7 +54,7 @@ jest.mock('../../../../../../app/assets/js/core/configmanager', () => ({
     getInstanceDirectorySync: jest.fn().mockReturnValue('/mock/instances'),
     getCommonDirectorySync: jest.fn().mockReturnValue('/mock/common'),
     getModConfiguration: jest.fn().mockReturnValue({ mods: {} }),
-    getJavaExecutable: jest.fn().mockReturnValue('/mock/java'),
+    getJavaExecutable: jest.fn().mockReturnValue('/mock/java/bin/javaw.exe'),
     getLaunchDetached: jest.fn().mockReturnValue(false),
     getTempNativeFolder: jest.fn().mockReturnValue('natives'),
 }))
@@ -102,7 +116,7 @@ describe('ProcessBuilder', () => {
         
         expect(mockFs.mkdirSync).toHaveBeenCalled()
         expect(mockSpawn).toHaveBeenCalledWith(
-            '/mock/java',
+            '/mock/java/bin/javaw.exe',
             expect.arrayContaining(['-Xmx2G']),
             expect.objectContaining({ cwd: expect.any(String) })
         )
@@ -130,11 +144,11 @@ describe('ProcessBuilder', () => {
         os.platform.mockReturnValue('win32')
         
         const ConfigManager = require('../../../../../../app/assets/js/core/configmanager')
-        ConfigManager.getJavaExecutable.mockReturnValueOnce('C:/Users/Тестовый Юзер/AppData/Local/Java/javaw.exe')
+        ConfigManager.getJavaExecutable.mockReturnValueOnce('C:/Users/Тестовый Юзер/AppData/Local/Java/bin/javaw.exe')
         
         await builder.build()
         expect(mockSpawn).toHaveBeenCalledWith(
-            'C:\\Users\\Тестовый Юзер\\AppData\\Local\\Java\\javaw.exe',
+            'C:\\Users\\Тестовый Юзер\\AppData\\Local\\Java\\bin\\javaw.exe',
             expect.any(Array),
             expect.any(Object)
         )

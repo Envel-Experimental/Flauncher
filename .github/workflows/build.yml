@@ -43,6 +43,8 @@ jobs:
             ~/.electron
             ~/.electron-gyp
             ~/.cache/electron
+            ~/Library/Caches/electron
+            ~\AppData\Local\electron\Cache
             ~/.cache/electron-builder
             ~/Library/Caches/electron-builder
             ~\AppData\Local\electron-builder\cache
@@ -59,7 +61,15 @@ jobs:
 
       - name: Install dependencies
         if: runner.os == 'Windows' || github.event.head_commit.message != '1'
-        run: npm ci --no-audit --no-fund
+        shell: bash
+        run: |
+          for i in 1 2 3; do
+            npm ci --no-audit --no-fund && break || {
+              if [ $i -eq 3 ]; then exit 1; fi
+              echo "Install failed, retrying in 10s..."
+              sleep 10
+            }
+          done
 
       - name: Lint Code
         if: runner.os == 'ubuntu-latest' && github.event.head_commit.message != '1'

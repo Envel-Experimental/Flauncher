@@ -119,7 +119,13 @@ class ProcessBuilder {
 
         // 6. Spawn Process
         const { ensureDecodedPath } = require('./util/NodeUtil')
-        this.javaPath = ensureDecodedPath(ConfigManager.getJavaExecutable(this.server.rawServer.id))
+        const { isJavaExecPath } = require('./java/JavaGuard')
+        const { javaExecFromRoot } = require('./java/JavaUtils')
+        let resolvedJavaPath = ensureDecodedPath(ConfigManager.getJavaExecutable(this.server.rawServer.id))
+        if (resolvedJavaPath && !isJavaExecPath(resolvedJavaPath)) {
+            resolvedJavaPath = javaExecFromRoot(resolvedJavaPath)
+        }
+        this.javaPath = resolvedJavaPath
         const javaPath = this.javaPath
         
         let finalArgs = args
@@ -190,6 +196,8 @@ class ProcessBuilder {
         const crashHandler = new GameCrashHandler(this.gameDir, this.commonDir, this.server, this.logBuffer)
 
         child.on('close', async (code, signal) => {
+            child._hasClosed = true
+            child._closeCode = code
             // Cleanup Natives
             this._cleanupTempNatives(tempNativePath)
             // Handle Crash UI

@@ -71,15 +71,24 @@ class LauncherService {
                 logBatcher.enqueue(contextString)
             }
             
+            if (this.activeProcess._hasClosed) {
+                log.info(`Game process closed prematurely with code ${this.activeProcess._closeCode}`)
+                if (event && event.sender && !event.sender.isDestroyed()) {
+                    event.sender.send('launcher:exit', this.activeProcess._closeCode !== null ? this.activeProcess._closeCode : -1)
+                }
+                this.activeProcess = null
+                return { success: true }
+            }
+
             this.activeProcess.stdout.on('data', (data) => logBatcher.enqueue(data))
             this.activeProcess.stderr.on('data', (data) => logBatcher.enqueue(data))
 
-            this.activeProcess.on('exit', (code) => {
+            this.activeProcess.on('close', (code, signal) => {
                 logBatcher.flush()
                 logBatcher.destroy()
-                log.info(`Game process exited with code ${code}`)
+                log.info(`Game process closed with code ${code}`)
                 if (event && event.sender && !event.sender.isDestroyed()) {
-                    event.sender.send('launcher:exit', code)
+                    event.sender.send('launcher:exit', code !== null ? code : -1)
                 }
                 this.activeProcess = null
             })

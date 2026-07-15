@@ -728,7 +728,9 @@ async function dlAsync(login = true) {
 
         window.HeliosAPI.launcher.onLog(tempListener)
         window.HeliosAPI.launcher.onLogError(gameErrorListener)
+        let hasExited = false
         window.HeliosAPI.launcher.onExit((code) => {
+            hasExited = true
             loggerLaunchSuite.warn(`Game exited with code ${code}. Resetting UI.`)
             toggleLaunchArea(false)
         })
@@ -749,7 +751,10 @@ async function dlAsync(login = true) {
                 serverId: serv.rawServer.id,
                 authUser: authUser
             })
-            setLaunchDetails(Lang.queryJS('landing.dlAsync.doneEnjoyServer'))
+            
+            if (!hasExited) {
+                setLaunchDetails(Lang.queryJS('landing.dlAsync.doneEnjoyServer'))
+            }
 
         } catch (err) {
             loggerLaunchSuite.error('Error during launch', err)

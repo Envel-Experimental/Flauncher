@@ -77,43 +77,41 @@ class SentryService {
                     }
 
                     // Duplicate Sentry events to FortenLog (Client DSN)
-                    try {
-                        const now = Date.now()
-                        const oneHourAgo = now - 3600000
-                        const instance = module.exports
-                        
-                        instance.envelopeTimestamps = (instance.envelopeTimestamps || []).filter(t => t > oneHourAgo)
-                        if (instance.envelopeTimestamps.length >= 20) {
-                            return event // Discard sending duplicate to FortenLog, but let local Sentry process it
-                        }
-                        instance.envelopeTimestamps.push(now)
-
-                        const eventStr = JSON.stringify(event)
-                        const envelopeHeader = JSON.stringify({
-                            event_id: event.event_id,
-                            sent_at: new Date().toISOString()
-                        })
-                        const itemHeader = JSON.stringify({
-                            type: 'event',
-                            length: Buffer.byteLength(eventStr, 'utf8')
-                        })
-                        const envelope = `${envelopeHeader}\n${itemHeader}\n${eventStr}`
-
-                        fetch('https://fortenlog.nikita.best/api/flauncher/envelope/', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-sentry-envelope',
-                                'X-Sentry-Auth': 'Sentry sentry_version=7, sentry_key=fl_d11d7795cb144b569026b61f6f22bf1c'
-                            },
-                            body: envelope
-                        }).catch(err => {
-                            if (!isProd) {
-                                console.error('[SentryService] Failed to duplicate event to FortenLog:', err)
+                    if (isProd) {
+                        try {
+                            const now = Date.now()
+                            const oneHourAgo = now - 3600000
+                            const instance = module.exports
+                            
+                            instance.envelopeTimestamps = (instance.envelopeTimestamps || []).filter(t => t > oneHourAgo)
+                            if (instance.envelopeTimestamps.length >= 20) {
+                                return event // Discard sending duplicate to FortenLog, but let local Sentry process it
                             }
-                        })
-                    } catch (err) {
-                        if (!isProd) {
-                            console.error('[SentryService] Error triggering duplicate event fetch:', err)
+                            instance.envelopeTimestamps.push(now)
+
+                            const eventStr = JSON.stringify(event)
+                            const envelopeHeader = JSON.stringify({
+                                event_id: event.event_id,
+                                sent_at: new Date().toISOString()
+                            })
+                            const itemHeader = JSON.stringify({
+                                type: 'event',
+                                length: Buffer.byteLength(eventStr, 'utf8')
+                            })
+                            const envelope = `${envelopeHeader}\n${itemHeader}\n${eventStr}`
+
+                            fetch('https://fortenlog.nikita.best/api/flauncher/envelope/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-sentry-envelope',
+                                    'X-Sentry-Auth': 'Sentry sentry_version=7, sentry_key=fl_d11d7795cb144b569026b61f6f22bf1c'
+                                },
+                                body: envelope
+                            }).catch(err => {
+                                // Silent fail in prod
+                            })
+                        } catch (err) {
+                            // Silent fail in prod
                         }
                     }
 
