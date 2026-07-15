@@ -95,20 +95,33 @@ describe('JavaGuard Detailed Tests', () => {
         expect(settings['java.library.path']).toEqual(['/lib1', '/lib2'])
     })
 
-    test('rankApplicableJvms should sort by version and type', () => {
+    test('rankApplicableJvms should sort by version and type and suggestedMajor', () => {
         const jvms = [
             { semver: { major: 11, minor: 0, patch: 1 }, path: '/jdk-11' },
             { semver: { major: 17, minor: 0, patch: 1 }, path: '/jre-17' },
             { semver: { major: 17, minor: 0, patch: 1 }, path: '/jdk-17' },
-            { semver: { major: 17, minor: 0, patch: 5 }, path: '/jre-17-u5' }
+            { semver: { major: 17, minor: 0, patch: 5 }, path: '/jre-17-u5' },
+            { semver: { major: 21, minor: 0, patch: 0 }, path: '/jdk-21' }
         ]
 
-        JavaGuard.rankApplicableJvms(jvms)
+        // Without suggestedMajor, 21 should be at the top
+        const jvmsNormal = [...jvms]
+        JavaGuard.rankApplicableJvms(jvmsNormal)
+        expect(jvmsNormal[0].semver.major).toBe(21)
+        expect(jvmsNormal[1].semver.patch).toBe(5) // 17-u5
 
-        expect(jvms[0].semver.patch).toBe(5)
-        expect(jvms[1].path).toBe('/jdk-17')
-        expect(jvms[2].path).toBe('/jre-17')
-        expect(jvms[3].semver.major).toBe(11)
+        // With suggestedMajor = 17, 17-u5 should be at the top, bypassing 21
+        const jvmsSuggested = [...jvms]
+        JavaGuard.rankApplicableJvms(jvmsSuggested, 17)
+        expect(jvmsSuggested[0].semver.major).toBe(17)
+        expect(jvmsSuggested[0].semver.patch).toBe(5) // 17-u5
+        expect(jvmsSuggested[3].semver.major).toBe(21) // 21 gets pushed below all 17s
+
+        // With suggestedMajor = "17" (string), should still work correctly
+        const jvmsSuggestedStr = [...jvms]
+        JavaGuard.rankApplicableJvms(jvmsSuggestedStr, "17")
+        expect(jvmsSuggestedStr[0].semver.major).toBe(17)
+        expect(jvmsSuggestedStr[0].semver.patch).toBe(5)
     })
 
     test('latestOpenJDK should race between mirror and official', async () => {

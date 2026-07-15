@@ -77,5 +77,11 @@ describe('JavaUtils', () => {
             const result = JavaUtils.ensureJavaDirIsRoot('/usr/lib/java')
             expect(result).toBe('/usr/lib/java')
         })
+
+        it('should handle null and undefined safely', () => {
+            expect(JavaUtils.ensureJavaDirIsRoot(null)).toBeNull()
+            expect(JavaUtils.ensureJavaDirIsRoot(undefined)).toBeUndefined()
+            expect(JavaUtils.ensureJavaDirIsRoot('')).toBe('')
+        })
     })
 })

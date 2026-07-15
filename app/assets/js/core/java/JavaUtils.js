@@ -55,6 +55,7 @@ function javaExecFromRoot(rootDir) {
 }
 
 function ensureJavaDirIsRoot(dir) {
+    if (!dir) return dir;
     switch (process.platform) {
         case Platform.DARWIN: {
             const index = dir.indexOf('/Contents/Home');

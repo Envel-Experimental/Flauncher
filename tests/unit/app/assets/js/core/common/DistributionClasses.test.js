@@ -69,8 +69,13 @@ describe('DistributionClasses', () => {
             expect(server.effectiveJavaOptions.suggestedMajor).toBe(8)
         })
 
-        it('should resolve default java version for >= 1.16', () => {
+        it('should resolve default java version for 1.17 to 1.20.4', () => {
             const server = new HeliosServer({ ...rawServer, minecraftVersion: '1.17.1' }, commonDir, instanceDir)
+            expect(server.effectiveJavaOptions.suggestedMajor).toBe(17)
+        })
+
+        it('should resolve default java version for >= 1.20.5', () => {
+            const server = new HeliosServer({ ...rawServer, minecraftVersion: '1.21' }, commonDir, instanceDir)
             expect(server.effectiveJavaOptions.suggestedMajor).toBe(21)
         })
     })

@@ -1837,7 +1837,8 @@ body[data-platform="darwin"] #frameContentDarwin {
 
 /* Default styles for text/number inputs. */
 #settingsContainer input[type=number],
-#settingsContainer input[type=text] {
+#settingsContainer input[type=text],
+#settingsContainer select {
     color: white;
     background: rgba(0, 0, 0, 0.25);
     border-radius: 3px;
@@ -1848,8 +1849,14 @@ body[data-platform="darwin"] #frameContentDarwin {
     transition: 0.25s ease;
 }
 
+#settingsContainer select option {
+    background: #333;
+    color: white;
+}
+
 #settingsContainer input[type=number]:focus,
-#settingsContainer input[type=text]:focus {
+#settingsContainer input[type=text]:focus,
+#settingsContainer select:focus {
     outline: none;
     border-color: rgba(126, 126, 126, 0.87);
 }

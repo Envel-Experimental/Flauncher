@@ -145,8 +145,16 @@ function filterApplicableJavaPaths(resolvedSettings, semverRange) {
     return jvmDetails;
 }
 
-function rankApplicableJvms(details) {
-    details.sort((a, b) => {
+function rankApplicableJvms(jvmDetails, suggestedMajor = null) {
+    jvmDetails.sort((a, b) => {
+        if (suggestedMajor !== null) {
+            const targetMajor = parseInt(suggestedMajor, 10);
+            const aIsSuggested = a.semver.major === targetMajor;
+            const bIsSuggested = b.semver.major === targetMajor;
+            if (aIsSuggested && !bIsSuggested) return -1;
+            if (!aIsSuggested && bIsSuggested) return 1;
+        }
+
         if (a.semver.major === b.semver.major) {
             if (a.semver.minor === b.semver.minor) {
                 if (a.semver.patch === b.semver.patch) {
@@ -171,16 +179,24 @@ function rankApplicableJvms(details) {
     });
 }
 
-async function discoverBestJvmInstallation(dataDir, semverRange) {
+async function discoverBestJvmInstallation(dataDir, semverRange, suggestedMajor = null) {
     const paths = [...new Set(await getValidatableJavaPaths(dataDir))];
     const resolvedSettings = await resolveJvmSettings(paths);
     const jvmDetails = filterApplicableJavaPaths(resolvedSettings, semverRange);
-    rankApplicableJvms(jvmDetails);
+    rankApplicableJvms(jvmDetails, suggestedMajor);
     return jvmDetails.length > 0 ? jvmDetails[0] : null;
 }
 
+async function discoverAllJvmInstallations(dataDir, semverRange = '*', suggestedMajor = null) {
+    const paths = [...new Set(await getValidatableJavaPaths(dataDir))];
+    const resolvedSettings = await resolveJvmSettings(paths);
+    const jvmDetails = filterApplicableJavaPaths(resolvedSettings, semverRange);
+    rankApplicableJvms(jvmDetails, suggestedMajor);
+    return jvmDetails;
+}
+
 async function validateSelectedJvm(path, semverRange) {
-    if (!path || path.trim() === '') {
+    if (!path || String(path).trim() === '' || path === 'null') {
         return null;
     }
     try {
@@ -851,6 +867,7 @@ module.exports = {
     ensureJavaDirIsRoot,
     javaExecFromRoot,
     discoverBestJvmInstallation,
+    discoverAllJvmInstallations,
     latestOpenJDK,
     latestAdoptium,
     latestCorretto,

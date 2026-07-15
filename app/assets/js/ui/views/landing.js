@@ -414,7 +414,8 @@ async function asyncSystemScan(effectiveJavaOptions, launchAfter = true) {
     // IPC Call to Main Process
     /** @type {any} */
     const jvmDetails = await ipcRenderer.invoke('sys:scanJava', {
-        version: effectiveJavaOptions.supported
+        version: effectiveJavaOptions.supported,
+        suggestedMajor: effectiveJavaOptions.suggestedMajor
     })
 
     if (jvmDetails == null) {

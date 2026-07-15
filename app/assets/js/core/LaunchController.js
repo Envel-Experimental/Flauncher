@@ -40,15 +40,42 @@ class LaunchController {
 
         ipcMain.handle('sys:scanJava', async (event, options) => {
             const JavaGuard = require('./java/JavaGuard');
-            return await JavaGuard.discoverBestJvmInstallation(
+            const ConfigManager = require('./configmanager');
+            const res = await JavaGuard.discoverBestJvmInstallation(
                 ConfigManager.getDataDirectory(),
-                options.version || null
+                options?.version || null,
+                options?.suggestedMajor || null
             );
+            if (res && res.semver) delete res.semver;
+            return res;
+        });
+
+        ipcMain.handle('sys:getAllJavas', async (event, options) => {
+            const JavaGuard = require('./java/JavaGuard');
+            const ConfigManager = require('./configmanager');
+            const res = await JavaGuard.discoverAllJvmInstallations(
+                ConfigManager.getDataDirectory(),
+                options?.version || null,
+                options?.suggestedMajor || null
+            );
+            return res.map(j => {
+                const copy = { ...j };
+                delete copy.semver;
+                return copy;
+            });
         });
 
         ipcMain.handle('sys:validateJava', async (event, path, version) => {
             const JavaGuard = require('./java/JavaGuard');
-            return await JavaGuard.validateSelectedJvm(path, version);
+            const ConfigManager = require('./configmanager');
+            let res;
+            if (!path || path.trim() === '' || path === 'null') {
+                res = await JavaGuard.discoverBestJvmInstallation(ConfigManager.getDataDirectory(), version);
+            } else {
+                res = await JavaGuard.validateSelectedJvm(path, version);
+            }
+            if (res && res.semver) delete res.semver;
+            return res;
         });
 
         ipcMain.handle('dl:downloadJava', async (event, options) => {

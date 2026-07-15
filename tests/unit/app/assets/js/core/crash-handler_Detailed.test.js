@@ -98,5 +98,19 @@ describe('CrashHandler Detailed Tests', () => {
             const result = await CrashHandler.analyzeFile('/missing.log')
             expect(result).toBeNull()
         })
+
+        it('should detect wrong-java-version for UnsupportedClassVersionError', () => {
+            const log = `java.lang.UnsupportedClassVersionError: class file version 65.0`
+            const res = CrashHandler.analyzeLog(log)
+            expect(res).not.toBeNull()
+            expect(res.type).toBe('wrong-java-version')
+        })
+
+        it('should detect wrong-java-version for IncompatibleClassChangeError', () => {
+            const log = `java.lang.IncompatibleClassChangeError: class cannot be cast`
+            const res = CrashHandler.analyzeLog(log)
+            expect(res).not.toBeNull()
+            expect(res.type).toBe('wrong-java-version')
+        })
     })
 })

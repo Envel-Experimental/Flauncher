@@ -206,6 +206,16 @@ exports.analyzeLog = function (logContent) {
         };
     }
 
+    // 13. Wrong Java Version
+    if (logContent.includes('java.lang.UnsupportedClassVersionError') ||
+        logContent.includes('java.lang.IncompatibleClassChangeError')) {
+        return {
+            type: 'wrong-java-version',
+            file: 'Java Runtime',
+            descriptionKey: 'wrong-java-version'
+        };
+    }
+
     return null;
 }
 

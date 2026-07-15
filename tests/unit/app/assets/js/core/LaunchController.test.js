@@ -94,7 +94,7 @@ describe('LaunchController', () => {
         it('sys:scanJava should call JavaGuard.discoverBestJvmInstallation with null version if not provided', async () => {
             const JavaGuard = require('@core/java/JavaGuard')
             await mockHandlers['sys:scanJava']({}, {})
-            expect(JavaGuard.discoverBestJvmInstallation).toHaveBeenCalledWith('/data', null)
+            expect(JavaGuard.discoverBestJvmInstallation).toHaveBeenCalledWith('/data', null, null)
         })
 
         it('sys:validateJava should call JavaGuard.validateSelectedJvm', async () => {

@@ -87,9 +87,28 @@ export function bindFileSelectors() {
 
             const res = await window.HeliosAPI.launcher.showOpenDialog(options)
             if (!res.canceled) {
-                ele.previousElementSibling.value = res.filePaths[0]
+                const selectedPath = res.filePaths[0]
                 if (isJavaExecSel) {
-                    await populateJavaExecDetails(ele.previousElementSibling.value)
+                    const selectEl = document.getElementById('settingsJavaExecVal')
+                    if (selectEl) {
+                        let found = false
+                        for (let i = 0; i < selectEl.options.length; i++) {
+                            if (selectEl.options[i].value === selectedPath) {
+                                found = true
+                                break
+                            }
+                        }
+                        if (!found) {
+                            const opt = document.createElement('option')
+                            opt.value = selectedPath
+                            opt.textContent = `Custom: ${selectedPath}`
+                            selectEl.appendChild(opt)
+                        }
+                        selectEl.value = selectedPath
+                        selectEl.dispatchEvent(new Event('change'))
+                    }
+                } else {
+                    ele.previousElementSibling.value = selectedPath
                 }
             }
         }
@@ -165,7 +184,7 @@ async function initSettingsValues() {
 
                     if (cVal === 'JavaExecutable') {
                         v.value = safeVal
-                        await populateJavaExecDetails(v.value)
+                        // Instead of populating details directly, we will let prepareJavaTab handle it with dropdown
                     } else if (cVal === 'DataDirectory') {
                         v.value = safeVal
                     } else if (cVal === 'JVMOptions') {
@@ -2210,13 +2229,76 @@ async function populateJavaExecDetails(execPath) {
 
     if (typeof settingsJavaExecDetails !== 'undefined' && settingsJavaExecDetails != null) {
         if (details != null) {
-            settingsJavaExecDetails.innerHTML = Lang.queryJS('settings.java.selectedJava', { version: details.semverStr, vendor: details.vendor })
+            const isAuto = !execPath || execPath === 'null' || String(execPath).trim() === '';
+            const autoPrefix = isAuto ? 'Авто: ' : '';
+            settingsJavaExecDetails.innerHTML = autoPrefix + Lang.queryJS('settings.java.selectedJava', { version: details.semverStr, vendor: details.vendor })
         } else {
             settingsJavaExecDetails.innerHTML = Lang.queryJS('settings.java.invalidSelection')
         }
     }
 }
 window.populateJavaExecDetails = populateJavaExecDetails;
+
+async function populateJavaExecDropdown(server) {
+    const selectEl = document.getElementById('settingsJavaExecVal');
+    if (!selectEl) return;
+
+    // Preserve the current value
+    const currentVal = ConfigManager.getJavaExecutable(server.rawServer.id);
+    
+    try {
+        const javas = await ipcRenderer.invoke('sys:getAllJavas', { 
+            version: server.effectiveJavaOptions.supported,
+            suggestedMajor: server.effectiveJavaOptions.suggestedMajor
+        });
+        
+        // Clear options right before appending, to avoid race conditions
+        selectEl.innerHTML = '<option value="" data-lang="settings.java.autoSelected">Автоматический выбор (Рекомендуется)</option>';
+        
+        if (javas && javas.length > 0) {
+            javas.forEach(j => {
+                const opt = document.createElement('option');
+                opt.value = j.path;
+                opt.textContent = `${j.vendor} Java ${j.semverStr} (${j.path})`;
+                selectEl.appendChild(opt);
+            });
+        }
+    } catch (e) {
+        console.error('Failed to get all Javas:', e);
+        // Fallback clear
+        selectEl.innerHTML = '<option value="" data-lang="settings.java.autoSelected">Автоматический выбор (Рекомендуется)</option>';
+    }
+
+    // Manual option placeholder if current is not in the list
+    let found = false;
+    for (let i = 0; i < selectEl.options.length; i++) {
+        if (selectEl.options[i].value === currentVal) {
+            found = true;
+            break;
+        }
+    }
+
+    if (currentVal && !found) {
+        const opt = document.createElement('option');
+        opt.value = currentVal;
+        opt.textContent = `Custom: ${currentVal}`;
+        selectEl.appendChild(opt);
+    }
+
+    // Set the selected value
+    selectEl.value = currentVal || '';
+    
+    // Add event listener to update config
+    selectEl.onchange = async () => {
+        const newVal = selectEl.value;
+        ConfigManager.setJavaExecutable(server.rawServer.id, newVal === '' ? null : newVal);
+        await ConfigManager.save();
+        await populateJavaExecDetails(newVal === '' ? null : newVal);
+    };
+
+    // Trigger initial population
+    await populateJavaExecDetails(currentVal || null);
+}
 
 export function populateJavaReqDesc(server) {
     if (typeof settingsJavaReqDesc !== 'undefined' && settingsJavaReqDesc != null) {
@@ -2275,6 +2357,7 @@ async function prepareJavaTab() {
         populateMemoryStatus()
         populateJavaReqDesc(server)
         populateJvmOptsLink(server)
+        await populateJavaExecDropdown(server)
     } else {
         console.warn('[Settings] prepareJavaTab: Server not found for ID:', serverId)
     }

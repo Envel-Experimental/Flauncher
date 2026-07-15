@@ -566,6 +566,10 @@ class GameCrashHandler {
                             fs.unlinkSync(configFile)
                         }
                     }
+                } else if (analysis.type === 'wrong-java-version') {
+                    logger.info(`Resetting Java Executable due to wrong-java-version crash for server ${this.server.rawServer.id}`)
+                    ConfigManager.setJavaExecutable(this.server.rawServer.id, null)
+                    await ConfigManager.save()
                 }
                 // Add more fix types as needed
             }
