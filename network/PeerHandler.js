@@ -490,14 +490,20 @@ class PeerHandler {
             if (relPath) {
                 relPath = relPath.trim()
                 // Basic sanitization: No '..'
-                if (relPath.includes('..')) relPath = null // Security Risk
-                if (path.isAbsolute(relPath)) relPath = null // Local path leakage
+                if (relPath.includes('..')) {
+                    relPath = null // Security Risk
+                } else if (path.isAbsolute(relPath)) {
+                    relPath = null // Local path leakage
+                }
             }
 
             if (fileId) {
                 fileId = fileId.trim()
-                if (fileId.includes('..')) fileId = null
-                if (path.isAbsolute(fileId)) fileId = null
+                if (fileId.includes('..')) {
+                    fileId = null
+                } else if (path.isAbsolute(fileId)) {
+                    fileId = null
+                }
             }
 
             if (hash) {
@@ -564,12 +570,13 @@ class PeerHandler {
             const dataDir = ConfigManager.getDataDirectory().trim()
 
             // Candidate Paths (Normalized)
-            const candidates = [
-                path.resolve(path.join(commonDir, 'assets', 'objects', hash.substring(0, 2), hash)),
-                path.resolve(path.join(dataDir, 'assets', 'objects', hash.substring(0, 2), hash)),
-                path.resolve(path.join(dataDir, 'common', 'assets', 'objects', hash.substring(0, 2), hash)),
-                path.resolve(path.join(dataDir, 'common', 'common', 'assets', 'objects', hash.substring(0, 2), hash))
-            ]
+            const candidates = []
+            if (hash) {
+                candidates.push(path.resolve(path.join(commonDir, 'assets', 'objects', hash.substring(0, 2), hash)))
+                candidates.push(path.resolve(path.join(dataDir, 'assets', 'objects', hash.substring(0, 2), hash)))
+                candidates.push(path.resolve(path.join(dataDir, 'common', 'assets', 'objects', hash.substring(0, 2), hash)))
+                candidates.push(path.resolve(path.join(dataDir, 'common', 'common', 'assets', 'objects', hash.substring(0, 2), hash)))
+            }
 
             if (relPath) {
                 candidates.push(path.resolve(path.join(commonDir, relPath)))
