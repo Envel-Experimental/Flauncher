@@ -683,6 +683,11 @@ class PeerHandler {
                     // WAN: Pipe through Global Rate Limiter
                     // Limiter is a Transform stream
                     source = /** @type {any} */(stream.pipe(RateLimiter.throttle()))
+                    source.on('error', (err) => {
+                        console.error('[PeerHandler] RateLimiter stream error:', err)
+                        errorOccurred = true
+                        cleanup()
+                    })
                 }
 
                 const activeUpload = this.uploads.get(reqId)
@@ -826,24 +831,31 @@ class PeerHandler {
                 }
 
                 source.on('data', (chunk) => {
-                    lastActivity = Date.now()
-                    totalBytesSent += chunk.length
+                    try {
+                        lastActivity = Date.now()
+                        totalBytesSent += chunk.length
 
-                    const isLocal = this.engine.isLocalIP(remoteIP)
-                    if (isLocal) {
-                        this.engine.uploadBytesLocal += chunk.length
-                        this.engine.totalUploadedLocal = (this.engine.totalUploadedLocal || 0) + chunk.length
-                    } else {
-                        this.engine.uploadBytesGlobal += chunk.length
-                        this.engine.totalUploadedGlobal = (this.engine.totalUploadedGlobal || 0) + chunk.length
-                    }
+                        const isLocal = this.engine.isLocalIP(remoteIP)
+                        if (isLocal) {
+                            this.engine.uploadBytesLocal += chunk.length
+                            this.engine.totalUploadedLocal = (this.engine.totalUploadedLocal || 0) + chunk.length
+                        } else {
+                            this.engine.uploadBytesGlobal += chunk.length
+                            this.engine.totalUploadedGlobal = (this.engine.totalUploadedGlobal || 0) + chunk.length
+                        }
 
-                    this.engine.totalUploaded = (this.engine.totalUploaded || 0) + chunk.length
-                    
-                    // BACKPRESSURE: Independent per-stream state in closure
-                    if (!this.sendData(reqId, chunk)) {
-                        isPausedLocal = true
-                        source.pause()
+                        this.engine.totalUploaded = (this.engine.totalUploaded || 0) + chunk.length
+                        
+                        // BACKPRESSURE: Independent per-stream state in closure
+                        if (!this.sendData(reqId, chunk)) {
+                            isPausedLocal = true
+                            source.pause()
+                        }
+                    } catch (err) {
+                        console.error('[PeerHandler] Error processing chunk:', err)
+                        errorOccurred = true
+                        this.sendError(reqId, 'Internal Data Error')
+                        cleanup()
                     }
                 })
 

@@ -117,10 +117,15 @@ class P2PEngine extends EventEmitter {
     get totalUploaded() { return this.bandwidth.totalUploaded }
     set totalUploaded(v) { this.bandwidth.totalUploaded = v }
     get totalDownloaded() { return this.bandwidth.totalDownloaded }
+    set totalDownloaded(v) { this.bandwidth.totalDownloaded = v }
     get totalUploadedLocal() { return this.bandwidth.totalUploadedLocal }
+    set totalUploadedLocal(v) { this.bandwidth.totalUploadedLocal = v }
     get totalUploadedGlobal() { return this.bandwidth.totalUploadedGlobal }
+    set totalUploadedGlobal(v) { this.bandwidth.totalUploadedGlobal = v }
     get totalDownloadedLocal() { return this.bandwidth.totalDownloadedLocal }
+    set totalDownloadedLocal(v) { this.bandwidth.totalDownloadedLocal = v }
     get totalDownloadedGlobal() { return this.bandwidth.totalDownloadedGlobal }
+    set totalDownloadedGlobal(v) { this.bandwidth.totalDownloadedGlobal = v }
     get uploadBytesLocal() { return this.bandwidth.uploadBytesLocal }
     set uploadBytesLocal(v) { this.bandwidth.uploadBytesLocal = v }
     get uploadBytesGlobal() { return this.bandwidth.uploadBytesGlobal }
