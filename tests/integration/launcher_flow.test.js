@@ -85,7 +85,7 @@ describe('Launcher Integration Flow', () => {
         // Verify Log forwarding was set up
         expect(mockProcess.stdout.on).toHaveBeenCalledWith('data', expect.any(Function))
         expect(mockProcess.stderr.on).toHaveBeenCalledWith('data', expect.any(Function))
-        expect(mockProcess.on).toHaveBeenCalledWith('exit', expect.any(Function))
+        expect(mockProcess.on).toHaveBeenCalledWith('close', expect.any(Function))
     })
 
     it('should throw an error if server is not found in distribution', async () => {

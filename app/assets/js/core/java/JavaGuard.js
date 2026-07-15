@@ -135,7 +135,7 @@ function filterApplicableJavaPaths(resolvedSettings, semverRange) {
                 semver: parsedVersion,
                 semverStr: javaVersionToString(parsedVersion),
                 vendor: settings['java.vendor'],
-                path
+                path: javaExecFromRoot(path)
             };
         })
         .filter(x => x != null);
@@ -616,12 +616,13 @@ async function runInstaller(installerPath) {
 }
 
 function isJavaExecPath(pth) {
+    const pthLower = pth.toLowerCase();
     switch (process.platform) {
         case Platform.WIN32:
-            return pth.endsWith(path.join('bin', 'javaw.exe'));
+            return pthLower.endsWith('javaw.exe') || pthLower.endsWith('java.exe');
         case Platform.DARWIN:
         case Platform.LINUX:
-            return pth.endsWith(path.join('bin', 'java'));
+            return pthLower.endsWith('/java') || pthLower.endsWith('java') || pthLower.endsWith('/javaw') || pthLower.endsWith('javaw');
         default:
             return false;
     }

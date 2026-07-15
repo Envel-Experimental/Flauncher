@@ -283,7 +283,7 @@ class GameCrashHandler {
         if (!supportUrl) {
             try {
                 // Determine remote URL from network/config
-                const NetworkConfig = require('../../../network/config')
+                const NetworkConfig = require('../../../../../network/config')
                 const response = await fetch(NetworkConfig.SUPPORT_CONFIG_URL, { cache: 'no-store' })
                 if (response.ok) {
                     const data = await response.json()
