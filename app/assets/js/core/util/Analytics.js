@@ -256,10 +256,15 @@ class Analytics {
             }
         }
 
+        // Ignore common background noise
         if (typeof message === 'string' && (
             message.toLowerCase().includes('fs:statfs') ||
+            message.toLowerCase().includes('net::err_internet_disconnected') ||
+            message.toLowerCase().includes('err_name_not_resolved') ||
+            message.toLowerCase().includes('could not find or load main class') ||
             message.toLowerCase().includes('is not signed by the application owner') ||
-            message.toLowerCase().includes('err_connection_reset')
+            message.toLowerCase().includes('terminated in a root certificate which is not trusted') ||
+            message.toLowerCase().includes('error invoking remote method \'config:save\'')
         )) {
             return
         }

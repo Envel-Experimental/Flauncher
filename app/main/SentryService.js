@@ -137,6 +137,19 @@ class SentryService {
     }
 
     captureException(error) {
+        if (!error) return
+
+        let errorStr = typeof error === 'string' ? error : (error.message || error.toString())
+        const lowerMessage = errorStr.toLowerCase()
+        if (
+            lowerMessage.includes('is not signed by the application owner') ||
+            lowerMessage.includes('terminated in a root certificate which is not trusted') ||
+            lowerMessage.includes('error invoking remote method \'config:save\'') ||
+            lowerMessage.includes('fs:statfs')
+        ) {
+            return
+        }
+
         if (typeof error === 'string') {
             let messagePart = error
             let logTailPart = ''
