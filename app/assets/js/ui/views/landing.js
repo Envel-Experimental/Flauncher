@@ -703,11 +703,13 @@ async function dlAsync(login = true) {
         setLaunchDetails(Lang.queryJS('landing.dlAsync.launchingGame'))
 
         // Attach listeners for logs from Main
+        let launchHandled = false
         const tempListener = (data) => {
-            if (typeof data !== 'string') return
+            if (launchHandled || typeof data !== 'string') return
             const lines = data.split(/\r?\n/)
             for (const line of lines) {
                 if (GAME_LAUNCH_REGEX.test(line.trim())) {
+                    launchHandled = true
                     const diff = Date.now() - start
                     if (diff < MIN_LINGER) {
                         setTimeout(() => toggleLaunchArea(false), MIN_LINGER - diff)
@@ -735,9 +737,11 @@ async function dlAsync(login = true) {
             toggleLaunchArea(false)
         })
 
-        window.HeliosAPI.launcher.onLog((data) => {
-            console.log('[Minecraft] ' + data)
-        })
+        // Do not print game logs to renderer console. 
+        // Doing so causes a massive IPC loop (Main->Renderer->Main) that freezes the UI.
+        // window.HeliosAPI.launcher.onLog((data) => {
+        //     console.log('[Minecraft] ' + data)
+        // })
 
         // For E2E tests
         window.activeMinecraftProcess = {

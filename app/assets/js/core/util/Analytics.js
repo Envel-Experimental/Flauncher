@@ -215,7 +215,9 @@ class Analytics {
                 })
      
                 if (!response.ok) {
-                    console.warn('[Analytics] FortenLog request failed:', response.status, response.statusText)
+                    if (response.status !== 429) {
+                        console.warn('[Analytics] FortenLog request failed:', response.status, response.statusText)
+                    }
                 }
             } catch (err) {
                 console.error('[Analytics] Failed to send FortenLog request:', err)
