@@ -590,6 +590,7 @@ exports.setModConfigurations = (configs) => { if (config) config.modConfiguratio
 exports.setLocalOptimization = (val) => { if (config) { if (!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.localOptimization = val } }
 exports.setGlobalOptimization = (val) => { if (config) { if (!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.globalOptimization = val } }
 exports.setP2PUploadEnabled = (val) => { if (config) { if (!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.p2pUploadEnabled = val } }
+exports.setP2PUploadLimit = (val) => { if (config) { if (!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.p2pUploadLimit = Number(val) } }
 exports.setP2POnlyMode = (val) => { if (config) { if (!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.p2pOnlyMode = val } }
 exports.setNoMojang = (val) => { if(config) { if(!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.noMojang = val } }
 exports.setNoServers = (val) => { if(config) { if(!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.noServers = val } }
