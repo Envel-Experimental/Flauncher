@@ -70,6 +70,13 @@ describe('util', () => {
             expect(fsPromises.writeFile).toHaveBeenCalled()
             expect(fsPromises.rename).toHaveBeenCalled()
         })
+
+        it('should fallback to direct write if rename fails', async () => {
+            fsPromises.rename.mockRejectedValueOnce(new Error('Rename failed'))
+            await util.safeWriteJson('test.json', { a: 1 })
+            // Once for the temp file, once for the fallback write to target file
+            expect(fsPromises.writeFile).toHaveBeenCalledTimes(2)
+        })
     })
 
     describe('safeReadJson', () => {

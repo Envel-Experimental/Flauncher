@@ -75,21 +75,23 @@ exports.move = async function (src, dest) {
  */
 exports.safeWriteJson = async function (file, data) {
     const tempFile = file + '.tmp.' + Date.now() + '.' + Math.random().toString(36).substring(2, 8)
+    const content = JSON.stringify(data, null, 4)
 
     await exports.ensureDir(path.dirname(file))
 
     try {
-        await fs.writeFile(tempFile, JSON.stringify(data, null, 4), 'utf-8')
+        await fs.writeFile(tempFile, content, 'utf-8')
         await exports.retry(async () => {
             await fs.rename(tempFile, file)
-        }, 5, 100, (err) => err.code === 'EPERM' || err.code === 'EBUSY')
+        }, 5, 100, (err) => err.code === 'EPERM' || err.code === 'EBUSY' || err.code === 'ENOENT')
     } catch (err) {
         try {
             await fs.rm(tempFile, { force: true })
         } catch (e) {
             // Ignore
         }
-        throw err
+        console.warn(`[util] Atomic write failed (${err.code || err.message}). Falling back to direct write to ${file}`)
+        await fs.writeFile(file, content, 'utf-8')
     }
 }
 
