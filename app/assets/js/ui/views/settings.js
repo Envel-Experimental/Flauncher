@@ -2239,55 +2239,27 @@ async function populateJavaExecDetails(execPath) {
 }
 window.populateJavaExecDetails = populateJavaExecDetails;
 
-async function populateJavaExecDropdown(server) {
+function populateJavaExecDropdown(server) {
     const selectEl = document.getElementById('settingsJavaExecVal');
     if (!selectEl) return;
 
     // Preserve the current value
     const currentVal = ConfigManager.getJavaExecutable(server.rawServer.id);
-    
-    try {
-        const javas = await ipcRenderer.invoke('sys:getAllJavas', { 
-            version: server.effectiveJavaOptions.supported,
-            suggestedMajor: server.effectiveJavaOptions.suggestedMajor
-        });
-        
-        // Clear options right before appending, to avoid race conditions
-        selectEl.innerHTML = '<option value="" data-lang="settings.java.autoSelected">Автоматический выбор (Рекомендуется)</option>';
-        
-        if (javas && javas.length > 0) {
-            javas.forEach(j => {
-                const opt = document.createElement('option');
-                opt.value = j.path;
-                opt.textContent = `${j.vendor} Java ${j.semverStr} (${j.path})`;
-                selectEl.appendChild(opt);
-            });
-        }
-    } catch (e) {
-        console.error('Failed to get all Javas:', e);
-        // Fallback clear
-        selectEl.innerHTML = '<option value="" data-lang="settings.java.autoSelected">Автоматический выбор (Рекомендуется)</option>';
-    }
+
+    // Clear options right before appending, to avoid race conditions
+    selectEl.innerHTML = '<option value="" data-lang="settings.java.autoSelected">Автоматический выбор (Рекомендуется)</option>';
 
     // Manual option placeholder if current is not in the list
-    let found = false;
-    for (let i = 0; i < selectEl.options.length; i++) {
-        if (selectEl.options[i].value === currentVal) {
-            found = true;
-            break;
-        }
-    }
-
-    if (currentVal && !found) {
+    if (currentVal) {
         const opt = document.createElement('option');
         opt.value = currentVal;
         opt.textContent = `Custom: ${currentVal}`;
         selectEl.appendChild(opt);
+        selectEl.value = currentVal;
+    } else {
+        selectEl.value = '';
     }
 
-    // Set the selected value
-    selectEl.value = currentVal || '';
-    
     // Add event listener to update config
     selectEl.onchange = async () => {
         const newVal = selectEl.value;
@@ -2296,8 +2268,47 @@ async function populateJavaExecDropdown(server) {
         await populateJavaExecDetails(newVal === '' ? null : newVal);
     };
 
-    // Trigger initial population
-    await populateJavaExecDetails(currentVal || null);
+    // Trigger initial population (async, in background)
+    populateJavaExecDetails(currentVal || null);
+
+    // Load actual Java runtimes from system in background
+    ipcRenderer.invoke('sys:getAllJavas', {
+        version: server.effectiveJavaOptions.supported,
+        suggestedMajor: server.effectiveJavaOptions.suggestedMajor
+    }).then((javas) => {
+        const innerSelectEl = document.getElementById('settingsJavaExecVal');
+        if (!innerSelectEl) return;
+
+        innerSelectEl.innerHTML = '<option value="" data-lang="settings.java.autoSelected">Автоматический выбор (Рекомендуется)</option>';
+
+        if (javas && javas.length > 0) {
+            javas.forEach(j => {
+                const opt = document.createElement('option');
+                opt.value = j.path;
+                opt.textContent = `${j.vendor} Java ${j.semverStr} (${j.path})`;
+                innerSelectEl.appendChild(opt);
+            });
+        }
+
+        let found = false;
+        for (let i = 0; i < innerSelectEl.options.length; i++) {
+            if (innerSelectEl.options[i].value === currentVal) {
+                found = true;
+                break;
+            }
+        }
+
+        if (currentVal && !found) {
+            const opt = document.createElement('option');
+            opt.value = currentVal;
+            opt.textContent = `Custom: ${currentVal}`;
+            innerSelectEl.appendChild(opt);
+        }
+
+        innerSelectEl.value = currentVal || '';
+    }).catch((e) => {
+        console.error('Failed to get all Javas:', e);
+    });
 }
 
 export function populateJavaReqDesc(server) {
