@@ -576,10 +576,10 @@ exports.getLaunchDetached = (def = false) => {
 exports.getTempNativeFolder = () => 'natives'
 
 // Setters
-exports.setSelectedServer = (id) => { 
+exports.setSelectedServer = (id) => {
     if (config) {
         console.log(`[ConfigManager] Setting selectedServer from ${config.selectedServer} to ${id}`)
-        config.selectedServer = id 
+        config.selectedServer = id
     } else {
         console.warn('[ConfigManager] Cannot set selectedServer: config is null!')
     }
@@ -592,11 +592,11 @@ exports.setGlobalOptimization = (val) => { if (config) { if (!config.settings.de
 exports.setP2PUploadEnabled = (val) => { if (config) { if (!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.p2pUploadEnabled = val } }
 exports.setP2PUploadLimit = (val) => { if (config) { if (!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.p2pUploadLimit = Number(val) } }
 exports.setP2POnlyMode = (val) => { if (config) { if (!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.p2pOnlyMode = val } }
-exports.setNoMojang = (val) => { if(config) { if(!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.noMojang = val } }
-exports.setNoServers = (val) => { if(config) { if(!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.noServers = val } }
-exports.setP2PPromptShown = (val) => { if(config) config.settings.p2pPromptShown = val }
-exports.setBackgroundVideoPaused = (val) => { if(config) { if(!config.settings.launcher) config.settings.launcher = {}; config.settings.launcher.backgroundVideoPaused = val } }
-exports.setBackgroundVideoInitialized = (val) => { if(config) { if(!config.settings.launcher) config.settings.launcher = {}; config.settings.launcher.backgroundVideoInitialized = val } }
+exports.setNoMojang = (val) => { if (config) { if (!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.noMojang = val } }
+exports.setNoServers = (val) => { if (config) { if (!config.settings.deliveryOptimization) config.settings.deliveryOptimization = {}; config.settings.deliveryOptimization.noServers = val } }
+exports.setP2PPromptShown = (val) => { if (config) config.settings.p2pPromptShown = val }
+exports.setBackgroundVideoPaused = (val) => { if (config) { if (!config.settings.launcher) config.settings.launcher = {}; config.settings.launcher.backgroundVideoPaused = val } }
+exports.setBackgroundVideoInitialized = (val) => { if (config) { if (!config.settings.launcher) config.settings.launcher = {}; config.settings.launcher.backgroundVideoInitialized = val } }
 exports.setGameWidth = (val) => { if (config) config.settings.game.resWidth = Number(val) }
 exports.setGameHeight = (val) => { if (config) config.settings.game.resHeight = Number(val) }
 exports.setFullscreen = (val) => { if (config) config.settings.game.fullscreen = val }
@@ -698,7 +698,7 @@ exports.acceptAgreement = async function () {
     const launcherDir = await exports.getLauncherDirectory()
     const agreementPath = path.join(launcherDir, 'agreement.json')
     const now = new Date()
-    
+
     const agreementData = {
         acceptedAt: now.toISOString(),
         timestamp: now.getTime(),
@@ -707,7 +707,7 @@ exports.acceptAgreement = async function () {
         arch: os.arch(),
         accepted: true
     }
-    
+
     await fs.writeFile(agreementPath, JSON.stringify(agreementData, null, 4))
     logger.info('Mandatory agreement accepted and recorded.')
 }
