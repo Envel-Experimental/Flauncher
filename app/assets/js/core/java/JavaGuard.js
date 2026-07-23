@@ -737,12 +737,34 @@ async function getLinuxDiscoverers(dataDir) {
 
 async function win32DriveMounts() {
     const drives = [];
+    const checkDrive = async (letter) => {
+        const drive = letter + ':\\';
+        return new Promise((resolve) => {
+            const timer = setTimeout(() => {
+                resolve(null);
+            }, 1000);
+            fs.access(drive)
+                .then(() => {
+                    clearTimeout(timer);
+                    resolve(drive);
+                })
+                .catch(() => {
+                    clearTimeout(timer);
+                    resolve(null);
+                });
+        });
+    };
+
+    const letters = [];
     for (let i = 67; i <= 90; i++) { // From 'C' to 'Z'
-        const drive = String.fromCharCode(i) + ':\\';
-        try {
-            await fs.access(drive);
-            drives.push(drive);
-        } catch (e) { /* Drive inaccessible (e.g. CD-ROM or locked drive) */ }
+        letters.push(String.fromCharCode(i));
+    }
+
+    const results = await Promise.all(letters.map(checkDrive));
+    for (const r of results) {
+        if (r != null) {
+            drives.push(r);
+        }
     }
     return drives.length > 0 ? drives : ['C:\\'];
 }
