@@ -38,6 +38,17 @@ module.exports = {
             "launcher_meta": "https://mirror.nikita.best/mirror/metadata",
             "java_manifest": "https://mirror.nikita.best/java/manifest.json",
             "distribution": "https://mirror.nikita.best/distribution.json"
+        },
+        {
+            "name": "Ext CloudFlare CDN",
+            "assets": "https://cdn-fox.envel.top/mirror/assets/objects",
+            "libraries": "https://cdn-fox.envel.top/mirror/libraries",
+            "client": "https://cdn-fox.envel.top/mirror/client",
+            "version_manifest": "https://cdn-fox.envel.top/mirror/metadata/version_manifest_v2.json",
+            "piston_meta": "https://cdn-fox.envel.top/mirror/metadata",
+            "launcher_meta": "https://cdn-fox.envel.top/mirror/metadata",
+            "java_manifest": "https://cdn-fox.envel.top/java/manifest.json",
+            "distribution": "https://cdn-fox.envel.top/distribution.json"
         }
         // {
         //     name: "Example Mirror",
