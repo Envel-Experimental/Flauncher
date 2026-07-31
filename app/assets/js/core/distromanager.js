@@ -146,16 +146,16 @@ async function pullRemoteInterceptor() {
  * @private
  */
 async function getDistributionRetry() {
-    const FAILED_DOWNLOAD_ERROR_CODE = 1
-    const MAX_DOWNLOAD_RETRIES = 2
-    const DOWNLOAD_RETRY_DELAY = 500
+    const MAX_DOWNLOAD_RETRIES = 3
+    const DOWNLOAD_RETRY_DELAY = 1000
 
     const realGetDistribution = DistributionAPI.prototype.getDistribution.bind(this)
     return await retry(
         realGetDistribution,
         MAX_DOWNLOAD_RETRIES,
         DOWNLOAD_RETRY_DELAY,
-        (err) => err.error === FAILED_DOWNLOAD_ERROR_CODE
+        // Retry on network/transient errors, but not on security violations
+        (err) => !err.message?.includes('replay') && !err.message?.includes('signature')
     ).catch((err) => {
         console.error('Failed to download distribution index after multiple retries.', err)
         return null

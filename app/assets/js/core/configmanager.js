@@ -153,14 +153,57 @@ exports.getLauncherDirectorySync = function () {
  * @returns {Promise<Response>}
  */
 exports.fetchWithTimeout = function (url, options, timeout) {
+    // In renderer: proxy through main process via Electron's net.fetch().
+    // net.fetch uses the native OS network stack and bypasses the Chromium sandbox
+    // network service, which can fail DNS/TLS on some macOS/Windows configurations.
+    if (typeof window !== 'undefined' && typeof window.HeliosAPI?.ipc?.invoke === 'function') {
+        const ipcPromise = window.HeliosAPI.ipc.invoke('net:fetch', url, options, timeout)
+        if (ipcPromise && typeof ipcPromise.then === 'function') {
+            return ipcPromise
+                .then(data => {
+                    if (!data || typeof data !== 'object') {
+                        return { ok: false, status: 500, arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)), text: () => Promise.resolve('') }
+                    }
+                    const { ok, status, body } = data
+                    const buf = Buffer.from(body || '', 'base64')
+                    const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+                    return {
+                        ok,
+                        status,
+                        arrayBuffer: () => Promise.resolve(ab),
+                        text: () => Promise.resolve(buf.toString('utf-8'))
+                    }
+                })
+                .catch((ipcErr) => {
+                    console.warn(`[ConfigManager] IPC net:fetch failed for ${url}, falling back to native fetch:`, ipcErr?.message || ipcErr)
+                    // Fallback to renderer native fetch on IPC failure
+                    let tId
+                    const tPromise = new Promise((_, reject) => {
+                        tId = setTimeout(() => reject(new Error('timeout')), timeout)
+                        if (tId.unref) tId.unref()
+                    })
+                    const fPromise = fetch(url, options)
+                    const safeFP = (fPromise && typeof fPromise.finally === 'function')
+                        ? fPromise.finally(() => clearTimeout(tId))
+                        : Promise.resolve(fPromise).finally(() => clearTimeout(tId))
+
+                    return Promise.race([safeFP, tPromise])
+                })
+        }
+    }
+    // Main process: native fetch (no sandbox restrictions)
     let timeoutId
     const timeoutPromise = new Promise((_, reject) => {
         timeoutId = setTimeout(() => reject(new Error('timeout')), timeout)
         if (timeoutId.unref) timeoutId.unref()
     })
+    const fetchPromise = fetch(url, options)
+    const safeFetchPromise = (fetchPromise && typeof fetchPromise.finally === 'function')
+        ? fetchPromise.finally(() => clearTimeout(timeoutId))
+        : Promise.resolve(fetchPromise).finally(() => clearTimeout(timeoutId))
 
     return Promise.race([
-        fetch(url, options).finally(() => clearTimeout(timeoutId)),
+        safeFetchPromise,
         timeoutPromise
     ])
 }

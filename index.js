@@ -13,8 +13,8 @@ const ConfigManager = require('./app/assets/js/core/configmanager')
 const LangLoader = require('./app/assets/js/core/langloader')
 const MirrorManager = require('./network/MirrorManager')
 const P2PEngine = require('./network/P2PEngine')
-const RaceManager = require('./network/RaceManager')
-const { MOJANG_MIRRORS } = require('./network/config')
+const NetworkConfig = require('./network/config')
+const { MOJANG_MIRRORS } = NetworkConfig
 const Analytics = require('./app/assets/js/core/util/Analytics')
 
 // Single Instance Lock
@@ -87,17 +87,46 @@ app.on('ready', async () => {
             }
         )
 
-        session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-            if (details.url.startsWith('file://') || details.url.startsWith('devtools://')) {
-                callback({
-                    responseHeaders: {
-                        ...details.responseHeaders,
-                        'Content-Security-Policy': ["default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' *; object-src 'none'; media-src 'self' https:; worker-src 'self'; frame-ancestors 'none'; form-action 'self';"]
+        // Unified response header handler: CSP for local files + CORS for our mirrors.
+        // Dynamically extract hostnames from network/config.js (MOJANG_MIRRORS + config URLs)
+        const mirrorHostSet = new Set()
+        if (Array.isArray(NetworkConfig.MOJANG_MIRRORS)) {
+            for (const mirror of NetworkConfig.MOJANG_MIRRORS) {
+                for (const val of Object.values(mirror)) {
+                    if (typeof val === 'string' && val.startsWith('http')) {
+                        try { mirrorHostSet.add(new URL(val).hostname) } catch (e) {}
                     }
-                })
-            } else {
-                callback({ responseHeaders: details.responseHeaders })
+                }
             }
+        }
+        for (const urlKey of ['BOOTSTRAP_URL', 'P2P_KILL_SWITCH_URL', 'SUPPORT_CONFIG_URL']) {
+            if (NetworkConfig[urlKey]) {
+                try { mirrorHostSet.add(new URL(NetworkConfig[urlKey]).hostname) } catch (e) {}
+            }
+        }
+        const MIRROR_HOSTS = Array.from(mirrorHostSet)
+
+        const CSP_VALUE = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' *; object-src 'none'; media-src 'self' https:; worker-src 'self'; frame-ancestors 'none'; form-action 'self';"
+        session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+            const url = details.url
+            const isMirror = MIRROR_HOSTS.some(h => url.includes(h))
+            const isLocal = url.startsWith('file://') || url.startsWith('devtools://')
+
+            if (!isMirror && !isLocal) {
+                callback({ responseHeaders: details.responseHeaders })
+                return
+            }
+
+            const extra = {}
+            if (isLocal) {
+                extra['Content-Security-Policy'] = [CSP_VALUE]
+            }
+            if (isMirror) {
+                extra['Access-Control-Allow-Origin'] = ['*']
+                extra['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS, RANGE']
+                extra['Access-Control-Allow-Headers'] = ['Content-Type, Range, X-File-Hash, X-File-Id, X-File-Path']
+            }
+            callback({ responseHeaders: { ...details.responseHeaders, ...extra } })
         })
 
         // Show Window

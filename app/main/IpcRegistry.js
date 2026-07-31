@@ -195,7 +195,50 @@ class IpcRegistry {
             }
         })
 
+        // Proxy HTTP requests from renderer through Electron's net.fetch (native OS network stack).
+        // This bypasses the Chromium sandbox network service which can fail DNS/TLS on some
+        // macOS and Windows configurations even when the system browser works fine.
+        ipcMain.handle('net:fetch', async (event, url, options, timeout) => {
+            const { net } = require('electron')
 
+            // 1. Strict URL validation
+            if (typeof url !== 'string' || !url.trim()) {
+                console.error(`[Main] net:fetch rejected invalid URL: ${url}`)
+                return { ok: false, status: 400, body: '' }
+            }
+
+            try {
+                const parsedUrl = new URL(url)
+                if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+                    console.error(`[Main] net:fetch blocked non-HTTP protocol: ${parsedUrl.protocol}`)
+                    return { ok: false, status: 403, body: '' }
+                }
+            } catch (e) {
+                console.error(`[Main] net:fetch invalid URL format: ${url}`)
+                return { ok: false, status: 400, body: '' }
+            }
+
+            // 2. Options sanitization
+            const safeOptions = (options && typeof options === 'object') ? { ...options } : {}
+            delete safeOptions.signal // Controlled internally via AbortController
+
+            const controller = new AbortController()
+            const timeoutMs = (typeof timeout === 'number' && Number.isFinite(timeout) && timeout > 0) ? Math.min(timeout, 60000) : 15000
+            const timer = setTimeout(() => controller.abort(), timeoutMs)
+
+            try {
+                const res = await net.fetch(url, { ...safeOptions, signal: controller.signal })
+                const arrayBuf = await res.arrayBuffer()
+                const buf = Buffer.from(arrayBuf)
+                return { ok: res.ok, status: res.status, body: buf.toString('base64') }
+            } catch (err) {
+                const msg = err.name === 'AbortError' ? `net:fetch timeout after ${timeoutMs}ms` : err.message
+                console.error(`[Main] net:fetch failed for ${url}: ${msg}`)
+                return { ok: false, status: 504, body: '' }
+            } finally {
+                clearTimeout(timer)
+            }
+        })
 
         ipcMain.handle(SHELL_OPCODE.TRASH_ITEM, async (event, ...args) => {
             try {
