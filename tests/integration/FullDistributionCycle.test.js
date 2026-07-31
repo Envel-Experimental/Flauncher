@@ -46,6 +46,19 @@ describe('Real-World Distribution Integration Cycle', () => {
             HeliosAPI: {
                 ipc: {
                     invoke: async (channel, data) => {
+                        if (channel === 'net:fetch') {
+                            const [url, options, timeout] = [data, arguments[2], arguments[3]]
+                            return new Promise((resolve, reject) => {
+                                http.get(url, (res) => {
+                                    const chunks = []
+                                    res.on('data', chunk => chunks.push(chunk))
+                                    res.on('end', () => {
+                                        const buf = Buffer.concat(chunks)
+                                        resolve({ ok: res.statusCode === 200, status: res.statusCode, body: buf.toString('base64') })
+                                    })
+                                }).on('error', reject)
+                            })
+                        }
                         if (channel === 'crypto:verifyDistribution') {
                             const { dataHex, signatureHex, trustedKeys } = data
                             for (const keyHex of trustedKeys) {
