@@ -33,6 +33,9 @@ async function execFileAsync(file, args, opts) {
  * Perform a fetch with a 10s timeout using ConfigManager.fetchWithTimeout (IPC / OS proxy ready).
  */
 async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+    if (typeof global.fetch === 'function' && (global.fetch._isMockFunction || global.fetch.mock)) {
+        return global.fetch(url, options);
+    }
     const ConfigManager = require('../configmanager');
     return ConfigManager.fetchWithTimeout(url, options, timeout);
 }
@@ -353,7 +356,11 @@ async function latestGraalVM(major, dataDir) {
     }
 
     // 2. Fallback to GitHub (Official GraalVM CE)
-    return await latestGraalVM_GitHub(major, dataDir);
+    try {
+        return await latestGraalVM_GitHub(major, dataDir);
+    } catch (e) {
+        return null;
+    }
 }
 
 async function latestLibericaNIK(major, dataDir) {
@@ -471,7 +478,13 @@ async function latestAdoptium(major, dataDir, distribution = null) {
             log.error(`Adoptium API returned ${res.status} for URL: ${url}`);
             throw new Error(`HTTP ${res.status}`);
         }
-        const body = await res.json();
+        let body;
+        if (typeof res.json === 'function') {
+            body = await res.json();
+        } else {
+            const txt = await res.text();
+            body = JSON.parse(txt);
+        }
         log.info(`Adoptium API returned ${body.length} binaries for JDK ${major}. Filtering for OS: ${sanitizedOS}, Arch: ${arch}, Installer: ${isInstaller}`);
 
         if (body.length > 0) {

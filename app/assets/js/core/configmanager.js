@@ -171,7 +171,8 @@ exports.fetchWithTimeout = function (url, options, timeout) {
                         ok,
                         status,
                         arrayBuffer: () => Promise.resolve(ab),
-                        text: () => Promise.resolve(buf.toString('utf-8'))
+                        text: () => Promise.resolve(buf.toString('utf-8')),
+                        json: () => Promise.resolve(JSON.parse(buf.toString('utf-8')))
                     }
                 })
                 .catch((ipcErr) => {
