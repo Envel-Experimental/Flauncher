@@ -110,7 +110,20 @@ async function validateLocalFile(filePath, algo, hash, expectedSize, requireHash
 }
 
 async function safeEnsureDir(dirPath) {
-    await fs.mkdir(dirPath, { recursive: true })
+    for (let i = 0; i < 5; i++) {
+        try {
+            await fs.mkdir(dirPath, { recursive: true })
+            return
+        } catch (err) {
+            const isLocked = err.code === 'EPERM' || err.code === 'EBUSY' || err.code === 'EACCES'
+            if (err.code === 'EEXIST') return
+            if (isLocked && i < 4) {
+                await new Promise(r => setTimeout(r, 50 * (i + 1)))
+                continue
+            }
+            throw err
+        }
+    }
 }
 
 function getLibraryDir(commonDir) {

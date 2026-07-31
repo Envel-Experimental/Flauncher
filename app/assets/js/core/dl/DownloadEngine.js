@@ -415,8 +415,8 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
             const total = asset.size || 0;
 
             activeWrites++;
+            let fileStream;
             try {
-                let fileStream;
                 try {
                     fileStream = fsSync.createWriteStream(tempPath, { flags: startOffset > 0 ? 'a' : 'w' });
                 } catch (e) {
@@ -461,6 +461,11 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
                 } else {
                     throw new Error('No body in response');
                 }
+            } catch (err) {
+                if (fileStream && !fileStream.destroyed) {
+                    try { fileStream.destroy() } catch (e) { /* Ignored */ }
+                }
+                throw err;
             } finally {
                 activeWrites--;
             }
@@ -474,7 +479,7 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
                     if (DISTRO_PUB_KEYS && DISTRO_PUB_KEYS.length > 0) {
                         try {
                             const sigUrl = currentUrl + '.sig';
-                            const sigRes = await fetch(sigUrl, { cache: 'no-store' });
+                            const sigRes = await ConfigManager.fetchWithTimeout(sigUrl, { cache: 'no-store' }, 10000);
                             if (!sigRes.ok) throw new Error(`Signature file missing or inaccessible (HTTP ${sigRes.status})`);
                             
                             const signatureHex = (await sigRes.text()).trim();
@@ -612,26 +617,33 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
 
 
 /**
- * Safely renames a file with retries to handle temporary locks from Antivirus/OS (Windows).
+ * Safely renames a file with retries and copy fallback to handle temporary locks from Antivirus/OS (Windows).
  * 
  * @param {string} oldPath 
  * @param {string} newPath 
- * @param {number} [retries=5] 
+ * @param {number} [retries=8] 
  */
-async function safeRename(oldPath, newPath, retries = 5) {
+async function safeRename(oldPath, newPath, retries = 8) {
     for (let i = 0; i < retries; i++) {
         try {
             await fs.rename(oldPath, newPath);
             return;
         } catch (err) {
-            const isLocked = err.code === 'EPERM' || err.code === 'EBUSY';
+            const isLocked = err.code === 'EPERM' || err.code === 'EBUSY' || err.code === 'EACCES';
             if (isLocked && i < retries - 1) {
-                const delay = 100 * (i + 1);
+                const delay = 150 * (i + 1);
                 log.debug(`[DownloadEngine] File locked during rename (${err.code}). Retry ${i + 1}/${retries} in ${delay}ms...`);
                 await sleep(delay);
                 continue;
             }
-            throw err;
+            // Fallback: Copy and unlink if rename is impossible (e.g. cross-device or persistent locking)
+            try {
+                await fs.copyFile(oldPath, newPath);
+                await fs.unlink(oldPath);
+                return;
+            } catch (copyErr) {
+                if (i === retries - 1) throw err;
+            }
         }
     }
 }
