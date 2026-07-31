@@ -29,12 +29,11 @@ async function execFileAsync(file, args, opts) {
     });
 }
 
-const ConfigManager = require('../configmanager');
-
 /**
  * Perform a fetch with a 10s timeout using ConfigManager.fetchWithTimeout (IPC / OS proxy ready).
  */
 async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+    const ConfigManager = require('../configmanager');
     return ConfigManager.fetchWithTimeout(url, options, timeout);
 }
 
