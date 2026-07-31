@@ -29,23 +29,13 @@ async function execFileAsync(file, args, opts) {
     });
 }
 
+const ConfigManager = require('../configmanager');
+
 /**
- * Perform a fetch with a 10s timeout.
+ * Perform a fetch with a 10s timeout using ConfigManager.fetchWithTimeout (IPC / OS proxy ready).
  */
 async function fetchWithTimeout(url, options = {}, timeout = 10000) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    try {
-        const response = await fetch(url, {
-            ...options,
-            signal: controller.signal
-        });
-        clearTimeout(id);
-        return response;
-    } catch (error) {
-        clearTimeout(id);
-        throw error;
-    }
+    return ConfigManager.fetchWithTimeout(url, options, timeout);
 }
 
 const { MOJANG_MIRRORS, DISTRO_PUB_KEYS } = require('../../../../../network/config');
