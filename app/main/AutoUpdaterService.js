@@ -17,10 +17,18 @@ const { verifyDistribution } = require('../assets/js/core/util/SignatureUtils')
 const ConfigManager = require('../assets/js/core/configmanager')
 
 const CUSTOM_UPDATE_URL = 'https://f-launcher.ru/fox/new/updates'
+// Used to resolve the commit hash of the latest "floating" pre-release.
+// electron-updater only offers an update when the remote semver version is
+// strictly greater than the installed one, so a Floating Release (same version,
+// newer commit) is otherwise reported as "update-not-available".
+const GITHUB_API_RELEASES_URL = 'https://api.github.com/repos/Envel-Experimental/Flauncher/releases?per_page=100'
 
 class AutoUpdaterService {
     constructor() {
         this.event = null
+        this._floatingGatePatched = false
+        this._originalIsUpdateAvailable = null
+        this._floatingOverride = null
     }
 
     init() {
@@ -30,7 +38,7 @@ class AutoUpdaterService {
         })
     }
 
-    handleAction(event, arg, data) {
+    async handleAction(event, arg, data) {
         switch (arg) {
             case 'initAutoUpdater':
                 this.setupListeners(event, data)
@@ -42,38 +50,22 @@ class AutoUpdaterService {
                 console.log('[AutoUpdater] Received checkForUpdate request (Floating Release Mode: ' + !!data + ')')
                 try {
                     const autoUpdater = getAutoUpdater()
-                    
-                    // If we are in "Floating Release" mode, we allow pre-releases
-                    // but we will add a filter in setupListeners or here.
-                    autoUpdater.allowPrerelease = !!data
+                    const isFloating = !!data
+
+                    // If we are in "Floating Release" mode, we allow pre-releases.
+                    autoUpdater.allowPrerelease = isFloating
+
+                    // In Floating Release mode electron-updater refuses to offer an update when
+                    // the remote semver version equals the installed one (every floating build
+                    // carries the same version with only the commit hash changing). Detect the
+                    // latest qualifying pre-release and, if its commit differs from the locally
+                    // installed build, force electron-updater to treat it as an update.
+                    await this.patchFloatingVersionGate(isFloating)
 
                     autoUpdater.checkForUpdates().then((result) => {
                         if (result && result.updateInfo) {
                             const title = (result.updateInfo.releaseName || result.updateInfo.version || '').toUpperCase()
-                            const releaseName = result.updateInfo.releaseName || ''
                             const isPre = !!result.updateInfo.prerelease
-                            
-                            // Hash-based comparison (Floating Release support)
-                            let localHash = 'unknown'
-                            try {
-                                const fsSync = require('fs')
-                                const versionPath = path.join(app.getAppPath(), 'version.json')
-                                if (fsSync.existsSync(versionPath)) {
-                                    const versionData = JSON.parse(fsSync.readFileSync(versionPath, 'utf8'))
-                                    localHash = versionData.buildHash || 'unknown'
-                                }
-                            } catch (e) {
-                                console.warn('[AutoUpdater] Failed to read local build hash:', e.message)
-                            }
-
-                            const remoteHashMatch = releaseName.match(/[a-f0-9]{7,40}/i)
-                            const remoteHash = remoteHashMatch ? remoteHashMatch[0] : null
-                            
-                            if (autoUpdater.allowPrerelease && remoteHash && localHash !== 'unknown' && !remoteHash.startsWith(localHash)) {
-                                console.log(`[AutoUpdater] FORCING update check because commit hash changed: ${localHash} -> ${remoteHash}`)
-                                // By returning true or just continuing, electron-updater will usually see it as a valid update
-                                // if the version is at least >= current. If version is SAME, CI should bump run ID.
-                            }
 
                             // If it's a pre-release, it MUST have "STABLE" or "CANARY" in the title to be accepted as a "Floating Release"
                             if (isPre && !title.includes('STABLE') && !title.includes('CANARY')) {
@@ -172,6 +164,142 @@ class AutoUpdaterService {
         } else {
             getAutoUpdater().allowPrerelease = data
         }
+    }
+
+    /**
+     * Read the build commit hash embedded into the installed bundle at build time.
+     * Falls back to 'unknown' when version.json is missing/unreadable.
+     */
+    getLocalBuildHash() {
+        const fsSync = require('fs')
+        const candidates = [
+            path.join(app.getAppPath(), 'assets', 'version.json'),
+            path.join(app.getAppPath(), 'version.json')
+        ]
+        for (const versionPath of candidates) {
+            try {
+                if (fsSync.existsSync(versionPath)) {
+                    const versionData = JSON.parse(fsSync.readFileSync(versionPath, 'utf8'))
+                    if (versionData && versionData.buildHash) {
+                        return String(versionData.buildHash).trim()
+                    }
+                }
+            } catch (e) {
+                console.warn(`[AutoUpdater] Failed to read local build hash from ${versionPath}:`, e.message)
+            }
+        }
+        return 'unknown'
+    }
+
+    /**
+     * Resolve the commit hash of the newest qualifying Floating Release on GitHub.
+     * A Floating Release is a non-draft pre-release whose name/title contains the
+     * "STABLE" or "CANARY" keyword (same business rule used in the update filter).
+     * Returns an empty string when no qualifying release exists or the API failed.
+     */
+    async getRemoteFloatingReleaseHash() {
+        try {
+            const res = await ConfigManager.fetchWithTimeout(GITHUB_API_RELEASES_URL, {
+                headers: { 'User-Agent': 'Flauncher-AutoUpdater', 'Accept': 'application/vnd.github+json' },
+                cache: 'no-store'
+            }, 10000)
+            if (!res.ok) {
+                console.warn('[AutoUpdater] GitHub releases API failed:', res.status)
+                return ''
+            }
+            const releases = await res.json()
+            if (!Array.isArray(releases)) return ''
+
+            const floating = releases.find(r =>
+                r && !r.draft && !!r.prerelease &&
+                typeof r.name === 'string' &&
+                (r.name.toUpperCase().includes('STABLE') || r.name.toUpperCase().includes('CANARY'))
+            )
+            if (!floating || typeof floating.target_commitish !== 'string') return ''
+
+            // GitHub reports the full 40-char SHA; reduce to the same short form
+            // used by the build (git rev-parse --short HEAD, up to 7 chars).
+            return floating.target_commitish.slice(0, 7).toLowerCase()
+        } catch (e) {
+            console.warn('[AutoUpdater] Failed to resolve floating release commit:', e.message)
+            return ''
+        }
+    }
+
+    /**
+     * In Floating Release mode every build keeps the same semver version and only the
+     * commit hash changes. electron-updater's isUpdateAvailable() returns false as soon as
+     * the remote version equals the installed one, so it never offers such a build.
+     *
+     * When the remote floating build differs from the locally installed one we override
+     * isUpdateAvailable() on the autoUpdater instance so an equal-version but newer-commit
+     * build is treated as a valid update. Never forces when hashes are unknown/equal.
+     */
+    async patchFloatingVersionGate(isFloating) {
+        const autoUpdater = getAutoUpdater()
+
+        // Track the genuine (library) implementation so we always restore it even
+        // after temporarily overriding it. If the instance still holds our own
+        // previous override, re-use the original we captured before applying it,
+        // otherwise (re)capture it fresh.
+        if (autoUpdater.isUpdateAvailable !== this._floatingOverride) {
+            this._originalIsUpdateAvailable = autoUpdater.isUpdateAvailable
+        }
+
+        const restore = () => {
+            if (this._floatingGatePatched && this._originalIsUpdateAvailable) {
+                autoUpdater.isUpdateAvailable = this._originalIsUpdateAvailable
+                this._floatingGatePatched = false
+            }
+        }
+
+        // Floating mode disabled => make sure any previous override is removed.
+        if (!isFloating) {
+            restore()
+            return
+        }
+
+        const localHash = this.getLocalBuildHash()
+        const remoteHash = await this.getRemoteFloatingReleaseHash()
+
+        if (localHash === 'unknown' || !remoteHash) {
+            console.log('[AutoUpdater] Floating mode: skipping hash gate patch (local or remote hash missing).')
+            restore()
+            return
+        }
+        if (remoteHash === localHash.toLowerCase() || localHash.toLowerCase().startsWith(remoteHash) || remoteHash.startsWith(localHash.toLowerCase())) {
+            console.log(`[AutoUpdater] Floating mode: local build (${localHash}) matches latest floating release. No forced update.`)
+            restore()
+            return
+        }
+
+        // Remove any previously-applied override before applying a fresh one.
+        restore()
+        console.log(`[AutoUpdater] Floating mode: forcing equal-version update ${localHash} -> ${remoteHash}`)
+        const original = this._originalIsUpdateAvailable
+        const override = async (updateInfo) => {
+            try {
+                if (typeof original === 'function') {
+                    const result = await Promise.resolve(original(updateInfo))
+                    if (result === true) return true
+                }
+                // Equal semver version + differing commit hash => treat as update.
+                if (updateInfo && typeof updateInfo.version === 'string') {
+                    const latest = semver.parse(updateInfo.version)
+                    const current = semver.parse(app.getVersion())
+                    if (latest && current && semver.eq(latest, current)) {
+                        return true
+                    }
+                }
+                return false
+            } catch (e) {
+                console.warn('[AutoUpdater] Floating gate override error:', e.message)
+                return typeof original === 'function' ? Promise.resolve(original(updateInfo)) : false
+            }
+        }
+        autoUpdater.isUpdateAvailable = override
+        this._floatingOverride = override
+        this._floatingGatePatched = true
     }
 
     async verifyMetadataSignature(url) {
