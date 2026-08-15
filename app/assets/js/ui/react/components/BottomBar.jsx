@@ -85,7 +85,7 @@ const BottomBar = () => {
             window.CURRENT_SELECTED_SERVER_ID = defaultServId;
             if (window.ConfigManager) {
               window.ConfigManager.setSelectedServer(defaultServId);
-              window.ConfigManager.save();
+              window.ConfigManager.save().catch(err => console.error('[BottomBar] ConfigManager save failed:', err));
             }
           }
         }
@@ -156,7 +156,7 @@ const BottomBar = () => {
     }
   }, []);
 
-  const handleLaunch = () => {
+  const handleLaunch = async () => {
     if (isPlaying || isCooldown || launchStatus) return;
 
     // Cooldown protection: block rapid re-clicks, always resets after 3s
@@ -168,7 +168,7 @@ const BottomBar = () => {
     if (window.ConfigManager && selectedVersion) {
       console.log(`[BottomBar] Forcing ConfigManager.selectedServer to: ${selectedVersion}`);
       window.ConfigManager.setSelectedServer(selectedVersion);
-      window.ConfigManager.save();
+      await window.ConfigManager.save().catch(err => console.error('[BottomBar] ConfigManager save failed:', err));
     }
 
     const launchBtn = document.getElementById('launch_button');
@@ -195,7 +195,7 @@ const BottomBar = () => {
 
     if (window.ConfigManager) {
       window.ConfigManager.setSelectedServer(newVal);
-      window.ConfigManager.save();
+      window.ConfigManager.save().catch(err => console.error('[BottomBar] ConfigManager save failed:', err));
     }
 
     if (window.updateSelectedServer) {

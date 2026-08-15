@@ -13,6 +13,7 @@ const ConfigManager = require('./app/assets/js/core/configmanager')
 const LangLoader = require('./app/assets/js/core/langloader')
 const MirrorManager = require('./network/MirrorManager')
 const P2PEngine = require('./network/P2PEngine')
+const RaceManager = require('./network/RaceManager')
 const NetworkConfig = require('./network/config')
 const { MOJANG_MIRRORS } = NetworkConfig
 const Analytics = require('./app/assets/js/core/util/Analytics')

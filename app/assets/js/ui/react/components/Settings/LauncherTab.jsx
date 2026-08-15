@@ -15,7 +15,7 @@ const LauncherTab = () => {
     setDataDir(e.target.value);
     if (window.ConfigManager) {
       window.ConfigManager.setDataDirectory(e.target.value);
-      window.ConfigManager.save();
+      window.ConfigManager.save().catch(err => console.error('[LauncherTab] ConfigManager save failed:', err));
     }
   };
 
@@ -24,7 +24,7 @@ const LauncherTab = () => {
     setAllowPrerelease(newVal);
     if (window.ConfigManager) {
       window.ConfigManager.setAllowPrerelease(newVal);
-      window.ConfigManager.save();
+      window.ConfigManager.save().catch(err => console.error('[LauncherTab] ConfigManager save failed:', err));
     }
   };
 

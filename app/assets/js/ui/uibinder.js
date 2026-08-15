@@ -856,7 +856,7 @@ function initBackgroundVideo() {
             ConfigManager.setBackgroundVideoPaused(true)
         }
         ConfigManager.setBackgroundVideoInitialized(true)
-        ConfigManager.save()
+        ConfigManager.save().catch(err => console.error('[UIBinder] ConfigManager save failed:', err))
     }
 
     let isPaused = ConfigManager.getBackgroundVideoPaused()
@@ -894,7 +894,7 @@ function initBackgroundVideo() {
     btn.onclick = () => {
         const nowPaused = !ConfigManager.getBackgroundVideoPaused()
         ConfigManager.setBackgroundVideoPaused(nowPaused)
-        ConfigManager.save()
+        ConfigManager.save().catch(err => console.error('[UIBinder] ConfigManager save failed:', err))
         updateUI(nowPaused, true) // override delay on user interaction
     }
 

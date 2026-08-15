@@ -2272,10 +2272,7 @@ function populateJavaExecDropdown(server) {
     populateJavaExecDetails(currentVal || null);
 
     // Load actual Java runtimes from system in background
-    ipcRenderer.invoke('sys:getAllJavas', {
-        version: server.effectiveJavaOptions.supported,
-        suggestedMajor: server.effectiveJavaOptions.suggestedMajor
-    }).then((javas) => {
+    ipcRenderer.invoke('sys:getAllJavas', { version: server.effectiveJavaOptions.supported, suggestedMajor: server.effectiveJavaOptions.suggestedMajor }).then((javas) => {
         const innerSelectEl = document.getElementById('settingsJavaExecVal');
         if (!innerSelectEl) return;
 

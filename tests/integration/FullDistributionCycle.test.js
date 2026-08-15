@@ -45,9 +45,9 @@ describe('Real-World Distribution Integration Cycle', () => {
         global.window = {
             HeliosAPI: {
                 ipc: {
-                    invoke: async (channel, data) => {
+                    invoke: async (channel, data, options, timeout) => {
                         if (channel === 'net:fetch') {
-                            const [url, options, timeout] = [data, arguments[2], arguments[3]]
+                            const [url, opts, to] = [data, options, timeout]
                             return new Promise((resolve, reject) => {
                                 http.get(url, (res) => {
                                     const chunks = []
