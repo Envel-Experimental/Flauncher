@@ -2507,6 +2507,19 @@ export function prepareAboutTab() {
             }
         }
     }
+
+    const supportVkBtn = document.getElementById('settingsAboutSupportVkButton')
+    if (supportVkBtn) {
+        supportVkBtn.onclick = () => {
+            const supportVkUrl = ConfigManager.getSupportVkUrl() || 'https://vk.me/join/lmxre6cIUGQBeVCW3_MsPd5BjQ9y/BgoAqk='
+            const hAPI = window.HeliosAPI || {}
+            if (hAPI.shell) {
+                hAPI.shell.openExternal(supportVkUrl)
+            } else {
+                shell.openExternal(supportVkUrl)
+            }
+        }
+    }
 }
 
 

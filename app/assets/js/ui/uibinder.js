@@ -219,6 +219,9 @@ export async function showMainUI(data) {
     if (data.rawDistribution.supportUrl) {
         ConfigManager.setSupportUrl(data.rawDistribution.supportUrl)
     }
+    if (data.rawDistribution.supportVkUrl) {
+        ConfigManager.setSupportVkUrl(data.rawDistribution.supportVkUrl)
+    }
     setTimeout(async () => {
         // Stop loading monitors because we are now transitioning to the main UI/Agreements
         window._loadingMonitorPaused = true

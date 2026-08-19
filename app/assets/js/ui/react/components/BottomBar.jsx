@@ -441,7 +441,8 @@ const BottomBar = () => {
                 { name: 'Сайт Фоксфорд', url: 'https://foxford.ru/programming' },
                 { name: 'Руководство по курсу', url: 'https://wiki.f-launcher.ru/' },
                 { name: 'Сайт лаунчера', url: 'https://f-launcher.ru/' },
-                { name: 'Поддержка', url: 'https://t.me/+1THtTcDneY9iYTVi' }
+                { name: 'Поддержка Telegram', url: (window.ConfigManager?.getSupportUrl && window.ConfigManager.getSupportUrl()) || 'https://t.me/+1THtTcDneY9iYTVi' },
+                { name: 'Поддержка VK', url: (window.ConfigManager?.getSupportVkUrl && window.ConfigManager.getSupportVkUrl()) || 'https://vk.me/join/lmxre6cIUGQBeVCW3_MsPd5BjQ9y/BgoAqk=' }
               ].map(link => (
                 <div
                   key={link.name}

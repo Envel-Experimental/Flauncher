@@ -290,6 +290,11 @@ class GameCrashHandler {
                     if (data.url) {
                         supportUrl = data.url
                         ConfigManager.setSupportUrl(supportUrl)
+                    }
+                    if (data.vkUrl) {
+                        ConfigManager.setSupportVkUrl(data.vkUrl)
+                    }
+                    if (data.url || data.vkUrl) {
                         await ConfigManager.save()
                     }
                 }

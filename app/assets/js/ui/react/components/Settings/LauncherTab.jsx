@@ -15,7 +15,14 @@ const LauncherTab = () => {
     setDataDir(e.target.value);
     if (window.ConfigManager) {
       window.ConfigManager.setDataDirectory(e.target.value);
-      window.ConfigManager.save().catch(err => console.error('[LauncherTab] ConfigManager save failed:', err));
+      try {
+        const res = window.ConfigManager.save();
+        if (res && typeof res.catch === 'function') {
+          res.catch(err => console.error('[LauncherTab] ConfigManager save failed:', err));
+        }
+      } catch (err) {
+        console.error('[LauncherTab] ConfigManager save error:', err);
+      }
     }
   };
 
@@ -24,7 +31,14 @@ const LauncherTab = () => {
     setAllowPrerelease(newVal);
     if (window.ConfigManager) {
       window.ConfigManager.setAllowPrerelease(newVal);
-      window.ConfigManager.save().catch(err => console.error('[LauncherTab] ConfigManager save failed:', err));
+      try {
+        const res = window.ConfigManager.save();
+        if (res && typeof res.catch === 'function') {
+          res.catch(err => console.error('[LauncherTab] ConfigManager save failed:', err));
+        }
+      } catch (err) {
+        console.error('[LauncherTab] ConfigManager save error:', err);
+      }
     }
   };
 

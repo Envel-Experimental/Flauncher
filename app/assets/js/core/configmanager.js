@@ -68,6 +68,7 @@ const isRenderer = process.type === 'renderer'
  * @property {Object.<string, any>} modConfigurations
  * @property {JavaConfig} javaConfig
  * @property {string|null} supportUrl
+ * @property {string|null} supportVkUrl
  * @property {boolean} [firstLaunch]
  */
 
@@ -112,6 +113,7 @@ const DEFAULT_CONFIG = {
         maxRAM: '3G'
     },
     supportUrl: null,
+    supportVkUrl: null,
     lastLauncherVersion: null
 }
 
@@ -165,14 +167,28 @@ exports.fetchWithTimeout = function (url, options, timeout) {
                         return { ok: false, status: 500, arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)), text: () => Promise.resolve('') }
                     }
                     const { ok, status, body } = data
-                    const buf = Buffer.from(body || '', 'base64')
-                    const ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+                    let ab
+                    let textContent = ''
+                    if (typeof Buffer !== 'undefined' && typeof Buffer.from === 'function') {
+                        const buf = Buffer.from(body || '', 'base64')
+                        ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+                        textContent = buf.toString('utf-8')
+                    } else {
+                        const binaryStr = typeof atob === 'function' ? atob(body || '') : ''
+                        const len = binaryStr.length
+                        const bytes = new Uint8Array(len)
+                        for (let i = 0; i < len; i++) {
+                            bytes[i] = binaryStr.charCodeAt(i)
+                        }
+                        ab = bytes.buffer
+                        textContent = typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8').decode(bytes) : binaryStr
+                    }
                     return {
                         ok,
                         status,
                         arrayBuffer: () => Promise.resolve(ab),
-                        text: () => Promise.resolve(buf.toString('utf-8')),
-                        json: () => Promise.resolve(JSON.parse(buf.toString('utf-8')))
+                        text: () => Promise.resolve(textContent),
+                        json: () => Promise.resolve(JSON.parse(textContent))
                     }
                 })
                 .catch((ipcErr) => {
@@ -552,6 +568,7 @@ exports.getNoMojang = () => config?.settings?.deliveryOptimization?.noMojang || 
 exports.getNoServers = () => config?.settings?.deliveryOptimization?.noServers || false
 exports.getAllowPrerelease = () => config?.settings?.launcher?.allowPrerelease || false
 exports.getSupportUrl = () => config?.supportUrl || DEFAULT_CONFIG.supportUrl
+exports.getSupportVkUrl = () => config?.supportVkUrl || DEFAULT_CONFIG.supportVkUrl
 exports.getP2PPromptShown = () => config?.settings?.p2pPromptShown || false
 exports.getBackgroundVideoPaused = () => config?.settings?.launcher?.backgroundVideoPaused || false
 exports.getBackgroundVideoInitialized = () => config?.settings?.launcher?.backgroundVideoInitialized || false
@@ -714,6 +731,11 @@ exports.isSaveEnabled = () => saveEnabled
 exports.getSupportUrl = () => config?.supportUrl || DEFAULT_CONFIG.supportUrl
 exports.setSupportUrl = (url) => {
     if (config) config.supportUrl = url
+}
+
+exports.getSupportVkUrl = () => config?.supportVkUrl || DEFAULT_CONFIG.supportVkUrl
+exports.setSupportVkUrl = (url) => {
+    if (config) config.supportVkUrl = url
 }
 
 exports.getLastLauncherVersion = () => { if (config) return config.lastLauncherVersion; return null }

@@ -144,7 +144,7 @@ class IpcRegistry {
             // Protect against prototype pollution only.
             // supportUrl and lastLauncherVersion are set by main process/server — renderer must not overwrite them.
             // javaExecutable is legitimately set by the user via Settings UI, so it is NOT blocked.
-            const BLOCKED_TOP_LEVEL = ['supportUrl', 'lastLauncherVersion']
+            const BLOCKED_TOP_LEVEL = ['supportUrl', 'supportVkUrl', 'lastLauncherVersion']
             const sanitize = (obj) => {
                 if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
                 const out = {}
@@ -158,6 +158,7 @@ class IpcRegistry {
             // Restore server-controlled fields from current in-memory config
             const current = ConfigManager.getConfig()
             if (current.supportUrl != null) safe.supportUrl = current.supportUrl
+            if (current.supportVkUrl != null) safe.supportVkUrl = current.supportVkUrl
             if (current.lastLauncherVersion != null) safe.lastLauncherVersion = current.lastLauncherVersion
             ConfigManager.setConfig(safe)
             return await ConfigManager.save()
