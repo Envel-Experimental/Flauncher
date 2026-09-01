@@ -40,6 +40,29 @@ describe('MirrorManager', () => {
         expect(MirrorManager.mirrors).toEqual([])
     })
 
+    it('uses HEAD request without query timestamp for fast latency check', async () => {
+        await MirrorManager.init([
+            { name: 'FastCDN', version_manifest: 'https://cdn.example.com/manifest.json' }
+        ])
+        expect(global.fetch).toHaveBeenCalled()
+        const [calledUrl, options] = global.fetch.mock.calls[0]
+        expect(calledUrl).toBe('https://cdn.example.com/manifest.json')
+        expect(options.method).toBe('HEAD')
+    })
+
+    it('falls back to GET if HEAD returns 405 Method Not Allowed', async () => {
+        global.fetch
+            .mockResolvedValueOnce({ ok: false, status: 405 })
+            .mockResolvedValueOnce({ ok: true, status: 200 })
+            .mockResolvedValueOnce({ ok: true, status: 200 })
+
+        await MirrorManager.init([
+            { name: 'LegacyServer', distribution: 'https://legacy.example.com/dist' }
+        ])
+        expect(MirrorManager.mirrors[0].status).toBe('active')
+        expect(global.fetch.mock.calls[1][1].method).toBe('GET')
+    })
+
     it('marks failed latency checks as down', async () => {
         global.fetch.mockRejectedValue(new Error('network error'))
         await MirrorManager.init([{ name: 'Dead', distribution: 'https://dead.com' }])

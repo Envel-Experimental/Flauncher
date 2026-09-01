@@ -60,12 +60,8 @@ class MirrorManager {
             return
         }
 
-        const start = Date.now()
-        let testUrlStr
         try {
-            const urlObj = new URL(rawUrl)
-            urlObj.searchParams.set('t', start.toString())
-            testUrlStr = urlObj.toString()
+            new URL(rawUrl)
         } catch (e) {
             logMain(`INVALID URL: ${mirrorEntry.config.name} (${rawUrl})`)
             mirrorEntry.latency = 9999
@@ -73,51 +69,63 @@ class MirrorManager {
             return
         }
 
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 5000)
+        const probeOnce = async (method = 'HEAD') => {
+            const start = Date.now()
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 4000)
 
-        try {
-            const response = await fetch(testUrlStr, {
-                method: 'GET',
-                signal: controller.signal,
-                cache: 'no-store',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Flauncher/1.0',
-                    'Referer': 'https://minecraft.net/',
-                    'Origin': 'https://minecraft.net',
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
-                }
-            })
+            try {
+                const response = await fetch(rawUrl, {
+                    method,
+                    signal: controller.signal,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Flauncher/1.0',
+                        'Referer': 'https://minecraft.net/',
+                        'Origin': 'https://minecraft.net'
+                    }
+                })
 
-            clearTimeout(timeoutId)
-            const latency = Date.now() - start
-            mirrorEntry.lastChecked = Date.now()
-
-            if (response.ok) {
-                mirrorEntry.latency = latency
-                mirrorEntry.status = latency < 400 ? 'active' : 'slow'
-                mirrorEntry.failures = 0
-                logMain(`SUCCESS: ${mirrorEntry.config.name} (${latency}ms)`)
-            } else {
-                logMain(`FAILED: ${mirrorEntry.config.name} (Status: ${response.status})`)
-                mirrorEntry.latency = 9999
-                mirrorEntry.status = 'down'
-                mirrorEntry.failures++
+                clearTimeout(timeoutId)
+                const latency = Date.now() - start
+                return { ok: response.ok, status: response.status, latency }
+            } catch (err) {
+                clearTimeout(timeoutId)
+                return { ok: false, error: err }
             }
-        } catch (err) {
-            clearTimeout(timeoutId)
+        }
+
+        // 1. Initial probe (warms up DNS and TLS session)
+        let probe = await probeOnce('HEAD')
+        if (!probe.ok && probe.status === 405) {
+            // Fallback to GET for servers disallowing HEAD
+            probe = await probeOnce('GET')
+        }
+
+        if (!probe.ok) {
             mirrorEntry.lastChecked = Date.now()
             mirrorEntry.latency = 9999
             mirrorEntry.status = 'down'
             mirrorEntry.failures++
 
-            if (err.name === 'AbortError') {
+            if (probe.error && probe.error.name === 'AbortError') {
                 logMain(`TIMEOUT: ${mirrorEntry.config.name || 'Unknown Mirror'}`)
+            } else if (probe.error) {
+                logMain(`ERROR: ${mirrorEntry.config.name} (${probe.error.message})`)
             } else {
-                logMain(`ERROR: ${mirrorEntry.config.name} (${err.message})`)
+                logMain(`FAILED: ${mirrorEntry.config.name} (Status: ${probe.status})`)
             }
+            return
         }
+
+        // 2. Second probe over warm Keep-Alive connection for accurate RTT
+        const warmProbe = await probeOnce('HEAD')
+        const finalLatency = warmProbe.ok ? Math.min(probe.latency, warmProbe.latency) : probe.latency
+
+        mirrorEntry.lastChecked = Date.now()
+        mirrorEntry.latency = finalLatency
+        mirrorEntry.status = finalLatency < 400 ? 'active' : 'slow'
+        mirrorEntry.failures = 0
+        logMain(`SUCCESS: ${mirrorEntry.config.name} (${finalLatency}ms)`)
     }
 
     _sortMirrors() {
