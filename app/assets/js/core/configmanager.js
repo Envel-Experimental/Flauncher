@@ -171,7 +171,7 @@ exports.fetchWithTimeout = function (url, options, timeout) {
                     let textContent = ''
                     if (typeof Buffer !== 'undefined' && typeof Buffer.from === 'function') {
                         const buf = Buffer.from(body || '', 'base64')
-                        ab = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+                        ab = buf.buffer ? (typeof buf.buffer.slice === 'function' ? buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) : buf.buffer) : new Uint8Array(buf).buffer
                         textContent = buf.toString('utf-8')
                     } else {
                         const binaryStr = typeof atob === 'function' ? atob(body || '') : ''
