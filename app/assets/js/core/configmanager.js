@@ -169,12 +169,8 @@ exports.fetchWithTimeout = function (url, options, timeout) {
                     const { ok, status, body } = data
                     let ab
                     let textContent = ''
-                    if (typeof Buffer !== 'undefined' && typeof Buffer.from === 'function') {
-                        const buf = Buffer.from(body || '', 'base64')
-                        ab = buf.buffer ? (typeof buf.buffer.slice === 'function' ? buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) : buf.buffer) : new Uint8Array(buf).buffer
-                        textContent = buf.toString('utf-8')
-                    } else {
-                        const binaryStr = typeof atob === 'function' ? atob(body || '') : ''
+                    if (typeof atob === 'function') {
+                        const binaryStr = atob(body || '')
                         const len = binaryStr.length
                         const bytes = new Uint8Array(len)
                         for (let i = 0; i < len; i++) {
@@ -182,6 +178,10 @@ exports.fetchWithTimeout = function (url, options, timeout) {
                         }
                         ab = bytes.buffer
                         textContent = typeof TextDecoder !== 'undefined' ? new TextDecoder('utf-8').decode(bytes) : binaryStr
+                    } else if (typeof Buffer !== 'undefined' && typeof Buffer.from === 'function') {
+                        const buf = Buffer.from(body || '', 'base64')
+                        ab = Uint8Array.from(buf).buffer
+                        textContent = buf.toString('utf-8')
                     }
                     return {
                         ok,

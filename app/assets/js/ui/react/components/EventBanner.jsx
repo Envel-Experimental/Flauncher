@@ -71,7 +71,7 @@ const EventBanner = () => {
         }, 500); // 500ms matches the CSS transition
 
       } catch (err) {
-        console.log('No active remote event or failed to fetch:', err);
+        // Silently ignore remote event fetch errors
       }
     };
 

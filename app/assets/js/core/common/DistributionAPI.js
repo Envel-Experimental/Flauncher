@@ -165,9 +165,19 @@ class DistributionAPI {
             const res = await fetchWithTimeout(url, { cache: 'no-store' }, 10000);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-            const rawBuffer = Buffer.from(await res.arrayBuffer());
-            const rawText = rawBuffer.toString('utf-8');
-            const data = JSON.parse(rawText);
+            const rawText = typeof res.text === 'function' ? await res.text() : Buffer.from(await res.arrayBuffer()).toString('utf-8');
+            let data;
+            try {
+                data = JSON.parse(rawText);
+            } catch (err) {
+                throw new Error(`Invalid JSON received from ${url}: ${err.message}`);
+            }
+
+            if (!data || typeof data !== 'object') {
+                throw new Error(`Invalid distribution payload received from ${url}`);
+            }
+
+            const rawBuffer = Buffer.from(rawText, 'utf-8');
 
             let signatureValid = false;
 

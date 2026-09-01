@@ -26,7 +26,7 @@ const Lang = require('./langloader')
 const distributionSources = [exports.REMOTE_DISTRO_URL]
 if (MOJANG_MIRRORS && Array.isArray(MOJANG_MIRRORS)) {
     MOJANG_MIRRORS.forEach(mirror => {
-        if (mirror.distribution) {
+        if (mirror.distribution && !distributionSources.includes(mirror.distribution)) {
             distributionSources.push(mirror.distribution)
         }
     })
