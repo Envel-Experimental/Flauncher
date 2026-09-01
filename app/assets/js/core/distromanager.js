@@ -14,7 +14,7 @@ const ConfigManager = require('./configmanager')
  * The default remote distribution index URL.
  * @type {string}
  */
-exports.REMOTE_DISTRO_URL = 'https://f-launcher.ru/fox/new/distribution.json'
+exports.REMOTE_DISTRO_URL = 'https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/distribution.json'
 
 const { MOJANG_MIRRORS, DISTRO_PUB_KEYS } = require('../../../../network/config')
 const Lang = require('./langloader')

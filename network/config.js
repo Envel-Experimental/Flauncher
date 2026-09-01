@@ -10,13 +10,24 @@ module.exports = {
         { host: 'node2.hyperdht.org', port: 49737 },
         { host: 'node3.hyperdht.org', port: 49737 }
     ],
-    BOOTSTRAP_URL: 'https://f-launcher.ru/fox/new/bootstrap.json',
-    P2P_KILL_SWITCH_URL: 'https://f-launcher.ru/fox/new/p2poff.json',
-    SUPPORT_CONFIG_URL: 'https://f-launcher.ru/fox/new/support.json',
+    BOOTSTRAP_URL: 'https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/bootstrap.json',
+    P2P_KILL_SWITCH_URL: 'https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/p2poff.json',
+    SUPPORT_CONFIG_URL: 'https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/support.json',
 
     // Optional: Array of mirror base URLs for Mojang assets
     // If primary fails, these will be tried in order.
     MOJANG_MIRRORS: [
+        {
+            "name": "Selectel CDN",
+            "assets": "https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/mirror/assets/objects",
+            "libraries": "https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/mirror/libraries",
+            "client": "https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/mirror/client",
+            "version_manifest": "https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/mirror/metadata/version_manifest_v2.json",
+            "piston_meta": "https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/mirror/metadata",
+            "launcher_meta": "https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/mirror/metadata",
+            "java_manifest": "https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/java/manifest.json",
+            "distribution": "https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/distribution.json"
+        },
         {
             "name": "Fox 1 Mirror",
             "assets": "https://f-launcher.ru/fox/new/mirror/assets/objects",

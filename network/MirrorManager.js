@@ -138,7 +138,7 @@ class MirrorManager {
                 const manifest = (entry.config.version_manifest || '').toLowerCase()
 
                 let lat = entry.latency
-                if (name.includes('fox') || dist.includes('f-launcher.ru') || manifest.includes('f-launcher.ru')) {
+                if (name.includes('fox') || dist.includes('f-launcher.ru') || manifest.includes('f-launcher.ru') || dist.includes('selcdn.net') || manifest.includes('selcdn.net')) {
                     lat -= FOX_LOYALTY_BONUS_MS
                 }
                 return lat
