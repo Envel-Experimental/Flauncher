@@ -75,6 +75,8 @@ launchFullscreenTitle = "Запуск в полноэкранном режиме
 
 launchDetachedTitle = "Запускать игру отдельно от лаунчера."
 launchDetachedDesc = "Если игра не отделена, закрытие лаунчера также закроет игру."
+macOSCompatibilityTitle = "Режим совместимости macOS"
+macOSCompatibilityDesc = "Принудительно передавать параметры совместимости (-XstartOnFirstThread) для старых версий игры на macOS."
 tabModsHeaderText = "Настройки модов"
 tabModsHeaderDesc = "Включение или отключение модов."
 switchServerButton = "Сменить"

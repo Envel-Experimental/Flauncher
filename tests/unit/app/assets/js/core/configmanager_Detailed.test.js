@@ -178,6 +178,24 @@ describe('ConfigManager Detailed Tests', () => {
             expect(ConfigManager.getSettings()).toBeDefined()
             expect(ConfigManager.getSelectedServer()).toBeNull()
             expect(ConfigManager.getAuthAccounts()).toEqual({})
+            expect(ConfigManager.getMacOSCompatibility()).toBe(false)
+        })
+
+        test('should remember and save macOSCompatibility toggle setting', () => {
+            ConfigManager.setConfig({
+                settings: {
+                    game: {
+                        macOSCompatibility: false
+                    }
+                }
+            })
+            expect(ConfigManager.getMacOSCompatibility()).toBe(false)
+            ConfigManager.setMacOSCompatibility(true)
+            expect(ConfigManager.getMacOSCompatibility()).toBe(true)
+            expect(ConfigManager.getConfig().settings.game.macOSCompatibility).toBe(true)
+            ConfigManager.setMacOSCompatibility(false)
+            expect(ConfigManager.getMacOSCompatibility()).toBe(false)
+            expect(ConfigManager.getConfig().settings.game.macOSCompatibility).toBe(false)
         })
 
         test('should update selected account when removing current', () => {

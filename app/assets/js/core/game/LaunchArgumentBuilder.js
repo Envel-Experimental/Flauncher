@@ -80,7 +80,9 @@ class LaunchArgumentBuilder {
 
         // macOS specific UI/System arguments
         if (process.platform === 'darwin') {
-            args.unshift('-XstartOnFirstThread')
+            if (ConfigManager.getMacOSCompatibility(true)) {
+                args.unshift('-XstartOnFirstThread')
+            }
             args.push('-Xdock:name=FLauncher')
             args.push('-Xdock:icon=' + path.join(__dirname, '..', '..', '..', 'images', 'minecraft.icns'))
         }
@@ -114,7 +116,7 @@ class LaunchArgumentBuilder {
             jvmArgs = jvmArgs.concat(this.modManifest.arguments.jvm)
         }
 
-        // Add mandatory macOS arguments
+        // Add macOS arguments
         if (process.platform === 'darwin') {
             const hasStartOnFirstThread = jvmArgs.some(arg => {
                 if (typeof arg === 'string') return arg === '-XstartOnFirstThread'
@@ -125,7 +127,7 @@ class LaunchArgumentBuilder {
                 return false
             })
             
-            if (!hasStartOnFirstThread) {
+            if (!hasStartOnFirstThread && ConfigManager.getMacOSCompatibility()) {
                 jvmArgs.unshift('-XstartOnFirstThread')
             }
             if (!mcVersionAtLeast('1.17', this.server.rawServer.minecraftVersion)) {

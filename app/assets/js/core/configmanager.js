@@ -16,6 +16,7 @@ const isRenderer = process.type === 'renderer'
  * @property {number} resHeight
  * @property {boolean} fullscreen
  * @property {boolean} launchDetached
+ * @property {boolean} macOSCompatibility
  */
 
 /**
@@ -83,7 +84,8 @@ const DEFAULT_CONFIG = {
             resWidth: 1280,
             resHeight: 720,
             fullscreen: false,
-            launchDetached: true
+            launchDetached: true,
+            macOSCompatibility: false
         },
         launcher: {
             allowPrerelease: false,
@@ -634,6 +636,11 @@ exports.getLaunchDetached = (def = false) => {
     return !def ? config.settings.game.launchDetached : DEFAULT_CONFIG.settings.game.launchDetached
 }
 
+exports.getMacOSCompatibility = (def = false) => {
+    if (!config || !config.settings || !config.settings.game) return DEFAULT_CONFIG.settings.game.macOSCompatibility
+    return !def ? (config.settings.game.macOSCompatibility ?? DEFAULT_CONFIG.settings.game.macOSCompatibility) : DEFAULT_CONFIG.settings.game.macOSCompatibility
+}
+
 exports.getTempNativeFolder = () => 'natives'
 
 // Setters
@@ -662,7 +669,8 @@ exports.setGameWidth = (val) => { if (config) config.settings.game.resWidth = Nu
 exports.setGameHeight = (val) => { if (config) config.settings.game.resHeight = Number(val) }
 exports.setFullscreen = (val) => { if (config) config.settings.game.fullscreen = val }
 
-exports.setLaunchDetached = (val) => { if (config) config.settings.game.launchDetached = val }
+exports.setLaunchDetached = (val) => { if (config) { if (!config.settings) config.settings = {}; if (!config.settings.game) config.settings.game = {}; config.settings.game.launchDetached = val } }
+exports.setMacOSCompatibility = (val) => { if (config) { if (!config.settings) config.settings = {}; if (!config.settings.game) config.settings.game = {}; config.settings.game.macOSCompatibility = val } }
 exports.setAllowPrerelease = (val) => { if (config) config.settings.launcher.allowPrerelease = val }
 exports.setJVMOptions = (id, val) => {
     if (!config) return
