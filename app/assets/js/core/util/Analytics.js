@@ -16,6 +16,8 @@ class Analytics {
         this.flushTimer = null
         this.lastFlushTime = 0
         this.flushTimestamps = []
+        this.fortenlogRateLimitedUntil = 0
+        this.isFlushing = false
     }
  
     async init() {
@@ -154,73 +156,93 @@ class Analytics {
     }
  
     async flush() {
-        if (this.queue.length === 0) {
+        if (this.isFlushing) return
+        if (this.flushTimer) {
+            clearTimeout(this.flushTimer)
             this.flushTimer = null
+        }
+        if (this.queue.length === 0) {
             return
         }
- 
+
         const now = Date.now()
         const oneHourAgo = now - 3600000
         this.flushTimestamps = this.flushTimestamps.filter(t => t > oneHourAgo)
- 
+
         if (this.flushTimestamps.length >= 20) {
             // Discard queue to protect server
             this.queue = []
-            this.flushTimer = null
             return
         }
- 
+
+        this.isFlushing = true
         this.flushTimestamps.push(now)
         const batch = [...this.queue]
         this.queue = []
-        this.flushTimer = null
         this.lastFlushTime = now
- 
+
         const isProd = isRenderer ? !window.isDev : require('electron').app.isPackaged
- 
-        // Send to PostHog
+
         try {
-            const response = await fetch(`${POSTHOG_HOST}/batch/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    api_key: POSTHOG_KEY,
-                    batch: batch
-                })
-            })
- 
-            if (!response.ok && isProd) {
-                console.warn('[Analytics] PostHog request failed:', response.status, response.statusText)
-            }
-        } catch (e) {
-            if (isProd) {
-                console.error('[Analytics] Error sending to PostHog:', e)
-            }
-        }
- 
-        // Duplicate to FortenLog
-        if (isProd) {
+            // Send to PostHog
             try {
-                const response = await fetch('https://fortenlog.nikita.best/batch/', {
+                const response = await fetch(`${POSTHOG_HOST}/batch/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        api_key: 'fl_d11d7795cb144b569026b61f6f22bf1c',
+                        api_key: POSTHOG_KEY,
                         batch: batch
                     })
                 })
-     
-                if (!response.ok) {
-                    if (response.status !== 429) {
-                        console.warn('[Analytics] FortenLog request failed:', response.status, response.statusText)
+
+                if (!response.ok && isProd) {
+                    console.warn('[Analytics] PostHog request failed:', response.status, response.statusText)
+                }
+            } catch (e) {
+                if (isProd) {
+                    console.error('[Analytics] Error sending to PostHog:', e)
+                }
+            }
+
+            // Duplicate to FortenLog
+            if (isProd) {
+                if (Date.now() < this.fortenlogRateLimitedUntil) {
+                    // Rate limited, skip FortenLog
+                } else {
+                    try {
+                        const response = await fetch('https://fortenlog.nikita.best/batch/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                api_key: 'fl_d11d7795cb144b569026b61f6f22bf1c',
+                                batch: batch
+                            })
+                        })
+             
+                        if (!response.ok) {
+                            if (response.status === 429) {
+                                // Back off for 10 minutes on rate limit
+                                this.fortenlogRateLimitedUntil = Date.now() + 10 * 60 * 1000
+                            } else {
+                                console.warn('[Analytics] FortenLog request failed:', response.status, response.statusText)
+                            }
+                        }
+                    } catch (err) {
+                        // Suppress network errors from FortenLog to prevent loops
                     }
                 }
-            } catch (err) {
-                console.error('[Analytics] Failed to send FortenLog request:', err)
+            }
+        } finally {
+            this.isFlushing = false
+            // If new events arrived while flushing, schedule next flush
+            if (this.queue.length > 0 && !this.flushTimer) {
+                const timeSinceLast = Date.now() - this.lastFlushTime
+                const nextDelay = Math.max(0, 10000 - timeSinceLast)
+                this.flushTimer = setTimeout(() => this.flush(), nextDelay)
             }
         }
     }
@@ -256,8 +278,12 @@ class Analytics {
             }
         }
 
-        // Ignore common background noise
+        // Ignore common background noise and telemetry network errors to prevent loops
         if (typeof message === 'string' && (
+            message.toLowerCase().includes('fortenlog') ||
+            message.toLowerCase().includes('posthog') ||
+            message.toLowerCase().includes('failed to fetch') ||
+            message.toLowerCase().includes('net::err_aborted') ||
             message.toLowerCase().includes('fs:statfs') ||
             message.toLowerCase().includes('net::err_internet_disconnected') ||
             message.toLowerCase().includes('err_name_not_resolved') ||

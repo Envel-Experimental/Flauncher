@@ -119,7 +119,7 @@ class MirrorManager {
 
         // 2. Second probe over warm Keep-Alive connection for accurate RTT
         const warmProbe = await probeOnce('HEAD')
-        const finalLatency = warmProbe.ok ? Math.min(probe.latency, warmProbe.latency) : probe.latency
+        const finalLatency = warmProbe.ok ? warmProbe.latency : probe.latency
 
         mirrorEntry.lastChecked = Date.now()
         mirrorEntry.latency = finalLatency

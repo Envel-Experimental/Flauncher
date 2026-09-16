@@ -17,6 +17,8 @@ const isDev = require('../app/assets/js/core/isdev')
 const RateLimiter = require('../app/assets/js/core/util/RateLimiter')
 
 const hashCache = new Map()
+let cachedDataDirReal = null
+let cachedCommonDirReal = null
 
 class PeerHandler {
     /**
@@ -1108,34 +1110,36 @@ class PeerHandler {
 
     _isRealPathSecure(realPath) {
         try {
-            if (!this.dataDirReal || !this.commonDirReal) {
-                // Re-attempt resolution if they failed in constructor (unlikely but safe)
+            if (!cachedDataDirReal || !cachedCommonDirReal) {
                 try {
                     const dataDir = ConfigManager.getDataDirectory().trim()
                     const commonDir = ConfigManager.getCommonDirectorySync().trim()
                     
                     if (fs.existsSync(dataDir)) {
-                        this.dataDirReal = fs.realpathSync(dataDir)
+                        cachedDataDirReal = fs.realpathSync(dataDir)
                     } else {
-                        this.dataDirReal = dataDir
+                        cachedDataDirReal = dataDir
                     }
 
                     if (fs.existsSync(commonDir)) {
-                        this.commonDirReal = fs.realpathSync(commonDir)
+                        cachedCommonDirReal = fs.realpathSync(commonDir)
                     } else {
-                        this.commonDirReal = commonDir
+                        cachedCommonDirReal = commonDir
                     }
                 } catch (e) {
-                    return false // Cannot verify security
+                    return false
                 }
             }
 
+            const dataDirTarget = this.dataDirReal || cachedDataDirReal
+            const commonDirTarget = this.commonDirReal || cachedCommonDirReal
+
             // Check Data Dir (Real)
-            const relData = path.relative(this.dataDirReal, realPath)
+            const relData = path.relative(dataDirTarget, realPath)
             const isInData = !relData.startsWith('..') && !path.isAbsolute(relData)
 
             // Check Common Dir (Real)
-            const relCommon = path.relative(this.commonDirReal, realPath)
+            const relCommon = path.relative(commonDirTarget, realPath)
             const isInCommon = !relCommon.startsWith('..') && !path.isAbsolute(relCommon)
 
             return isInData || isInCommon
@@ -1161,8 +1165,15 @@ class PeerHandler {
 
                 if (typeof stream[Symbol.asyncIterator] === 'function') {
                     const consume = async () => {
+                        let bytesProcessed = 0
                         for await (const chunk of stream) {
                             hash.update(chunk)
+                            bytesProcessed += chunk.length
+                            // Yield event loop every 1MB to prevent UI freezes
+                            if (bytesProcessed > 1024 * 1024) {
+                                bytesProcessed = 0
+                                await new Promise(r => setImmediate(r))
+                            }
                         }
                     }
                     consume()

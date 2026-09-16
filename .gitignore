@@ -58,3 +58,6 @@ test_render.html
 
 /coverage/
 /TestServer/
+
+# Sentry private scripts / tokens
+/.sentry/

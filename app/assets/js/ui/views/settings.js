@@ -290,14 +290,13 @@ export const getP2PStatsMarkup = (info) => {
             .p2p-stats-wrapper {
                 display: flex;
                 gap: 15px;
-                background: rgba(20, 20, 20, 0.85);
-                padding: 20px;
-                border-radius: 18px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                box-shadow: 0 12px 45px rgba(0,0,0,0.45);
+                background: rgba(15, 15, 15, 0.65);
+                padding: 14px 18px;
+                border-radius: 14px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
                 width: 100%;
-                max-width: 740px;
-                max-height: 65vh;
+                max-width: 720px;
+                max-height: calc(75vh - 150px);
                 overflow-y: auto;
                 overflow-x: hidden;
                 box-sizing: border-box;
@@ -318,8 +317,8 @@ export const getP2PStatsMarkup = (info) => {
                 flex: 1;
                 display: flex;
                 flex-direction: column;
-                gap: 8px;
-                min-width: 280px;
+                gap: 4px;
+                min-width: 270px;
             }
             .p2p-divider {
                 width: 1px;
@@ -338,7 +337,7 @@ export const getP2PStatsMarkup = (info) => {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                padding: 8px 0;
+                padding: 4px 0;
                 border-bottom: 1px solid rgba(255,255,255,0.05);
             }
             .p2p-data-label {
@@ -1032,6 +1031,10 @@ export function settingsNavItemListener(ele, fade = true) {
         populateMirrorStatus()
         populateBootstrapStatus()
         updateConnectivityStatus()
+        if (!window._lastMirrorTabRefresh || Date.now() - window._lastMirrorTabRefresh > 30000) {
+            window._lastMirrorTabRefresh = Date.now()
+            populateMirrorStatus(true)
+        }
     } else if (selectedSettingsTab === 'settingsTabAccount') {
         prepareAccountsTab()
     }
