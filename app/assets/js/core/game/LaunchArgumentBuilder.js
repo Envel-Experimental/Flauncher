@@ -80,7 +80,8 @@ class LaunchArgumentBuilder {
 
         // macOS specific UI/System arguments
         if (process.platform === 'darwin') {
-            if (ConfigManager.getMacOSCompatibility(true)) {
+            const isMacOSCompat112 = typeof ConfigManager.getMacOSCompatibility === 'function' ? ConfigManager.getMacOSCompatibility(true) : true
+            if (isMacOSCompat112) {
                 args.unshift('-XstartOnFirstThread')
             }
             args.push('-Xdock:name=FLauncher')
@@ -127,7 +128,8 @@ class LaunchArgumentBuilder {
                 return false
             })
             
-            if (!hasStartOnFirstThread && ConfigManager.getMacOSCompatibility()) {
+            const isMacOSCompatEnabled = typeof ConfigManager.getMacOSCompatibility === 'function' ? ConfigManager.getMacOSCompatibility() : false
+            if (!hasStartOnFirstThread && isMacOSCompatEnabled) {
                 jvmArgs.unshift('-XstartOnFirstThread')
             }
             if (!mcVersionAtLeast('1.17', this.server.rawServer.minecraftVersion)) {

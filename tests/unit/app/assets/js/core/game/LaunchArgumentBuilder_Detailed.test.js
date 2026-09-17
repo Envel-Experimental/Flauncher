@@ -32,7 +32,8 @@ describe('LaunchArgumentBuilder Detailed Tests', () => {
             getJVMOptions: jest.fn().mockReturnValue(['-XX:+UseG1GC']),
             getGameWidth: jest.fn().mockReturnValue(854),
             getGameHeight: jest.fn().mockReturnValue(480),
-            getFullscreen: jest.fn().mockReturnValue(false)
+            getFullscreen: jest.fn().mockReturnValue(false),
+            getMacOSCompatibility: jest.fn().mockReturnValue(false)
         }))
 
         jest.doMock('@core/util/LoggerUtil', () => ({

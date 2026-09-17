@@ -69,7 +69,8 @@ describe('LaunchArgumentBuilder', () => {
             getGameWidth: jest.fn().mockReturnValue(800),
             getGameHeight: jest.fn().mockReturnValue(600),
             getFullscreen: jest.fn().mockReturnValue(false),
-            getLaunchDetached: jest.fn().mockReturnValue(false)
+            getLaunchDetached: jest.fn().mockReturnValue(false),
+            getMacOSCompatibility: jest.fn().mockReturnValue(false)
         }))
         
         jest.mock('../../../../../../../app/assets/js/core/common/FileUtils', () => ({
