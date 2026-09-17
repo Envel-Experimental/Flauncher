@@ -121,8 +121,9 @@ jobs:
         if: runner.os == 'Windows' || github.event.head_commit.message != '1'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          CSC_LINK: ${{ runner.os == 'Windows' && secrets.WIN_CSC_LINK || '' }}
+          CSC_KEY_PASSWORD: ${{ runner.os == 'Windows' && secrets.WIN_CSC_KEY_PASSWORD || '' }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: "foxford-dc"
@@ -148,11 +149,18 @@ jobs:
           fi
           
           if [ "$RUNNER_OS" == "Linux" ]; then
-            CSC_IDENTITY_AUTO_DISCOVERY=false CSC_LINK="" CSC_KEY_PASSWORD="" npm run dist -- --linux appimage snap deb rpm tar.gz
+            unset CSC_LINK
+            unset CSC_KEY_PASSWORD
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            npm run dist -- --linux appimage snap deb rpm tar.gz
           elif [ "$RUNNER_OS" == "Windows" ]; then
+            export CSC_IDENTITY_AUTO_DISCOVERY=true
             npm run dist -- --win
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            CSC_IDENTITY_AUTO_DISCOVERY=false CSC_LINK="" CSC_KEY_PASSWORD="" npm run dist -- --mac
+            unset CSC_LINK
+            unset CSC_KEY_PASSWORD
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            npm run dist -- -c.mac.identity=null --mac
           fi
 
       - name: Apply Staging Percentage from Commit
