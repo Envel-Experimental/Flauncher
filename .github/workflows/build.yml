@@ -148,11 +148,11 @@ jobs:
           fi
           
           if [ "$RUNNER_OS" == "Linux" ]; then
-            npm run dist -- --linux appimage snap deb rpm tar.gz
+            CSC_IDENTITY_AUTO_DISCOVERY=false CSC_LINK="" CSC_KEY_PASSWORD="" npm run dist -- --linux appimage snap deb rpm tar.gz
           elif [ "$RUNNER_OS" == "Windows" ]; then
             npm run dist -- --win
           elif [ "$RUNNER_OS" == "macOS" ]; then
-            npm run dist -- --mac
+            CSC_IDENTITY_AUTO_DISCOVERY=false CSC_LINK="" CSC_KEY_PASSWORD="" npm run dist -- --mac
           fi
 
       - name: Apply Staging Percentage from Commit
