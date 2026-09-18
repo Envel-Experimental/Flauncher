@@ -329,6 +329,9 @@ exports.load = async function () {
         } else {
             console.log('[ConfigManager] Creating default config...')
             DEFAULT_CONFIG.settings.launcher.dataDirectory = await exports.getLauncherDirectory()
+            if (process.platform === 'darwin' && process.arch === 'arm64') {
+                DEFAULT_CONFIG.settings.game.macOSCompatibility = true
+            }
             config = DEFAULT_CONFIG
             firstLaunch = true
             await exports.save()
@@ -367,6 +370,11 @@ exports.load = async function () {
         }
 
         config = validateKeySet(DEFAULT_CONFIG, config)
+        if (process.platform === 'darwin' && process.arch === 'arm64') {
+            if (config.settings?.game && config.settings.game.macOSCompatibility === undefined) {
+                config.settings.game.macOSCompatibility = true
+            }
+        }
 
         // Smart RAM distribution logic
         // If maxRAM is default or not set, try to allocate 3GB, but within 70% and 12GB limits.
@@ -637,8 +645,10 @@ exports.getLaunchDetached = (def = false) => {
 }
 
 exports.getMacOSCompatibility = (def = false) => {
-    if (!config || !config.settings || !config.settings.game) return DEFAULT_CONFIG.settings.game.macOSCompatibility
-    return !def ? (config.settings.game.macOSCompatibility ?? DEFAULT_CONFIG.settings.game.macOSCompatibility) : DEFAULT_CONFIG.settings.game.macOSCompatibility
+    const isAppleSilicon = process.platform === 'darwin' && process.arch === 'arm64'
+    const defaultVal = isAppleSilicon ? true : DEFAULT_CONFIG.settings.game.macOSCompatibility
+    if (!config || !config.settings || !config.settings.game) return defaultVal
+    return !def ? (config.settings.game.macOSCompatibility ?? defaultVal) : defaultVal
 }
 
 exports.getTempNativeFolder = () => 'natives'

@@ -198,6 +198,31 @@ describe('ConfigManager Detailed Tests', () => {
             expect(ConfigManager.getConfig().settings.game.macOSCompatibility).toBe(false)
         })
 
+        test('should default macOSCompatibility to true on Apple Silicon (darwin arm64)', () => {
+            const origPlatform = process.platform
+            const origArch = process.arch
+            try {
+                Object.defineProperty(process, 'platform', { value: 'darwin', configurable: true })
+                Object.defineProperty(process, 'arch', { value: 'arm64', configurable: true })
+                ConfigManager.setConfig(null)
+                expect(ConfigManager.getMacOSCompatibility()).toBe(true)
+
+                ConfigManager.setConfig({
+                    settings: {
+                        game: {}
+                    }
+                })
+                expect(ConfigManager.getMacOSCompatibility()).toBe(true)
+
+                // User explicit override to false must be respected
+                ConfigManager.setMacOSCompatibility(false)
+                expect(ConfigManager.getMacOSCompatibility()).toBe(false)
+            } finally {
+                Object.defineProperty(process, 'platform', { value: origPlatform, configurable: true })
+                Object.defineProperty(process, 'arch', { value: origArch, configurable: true })
+            }
+        })
+
         test('should update selected account when removing current', () => {
             ConfigManager.setConfig({
                 selectedAccount: 'acc1',
