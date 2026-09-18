@@ -135,11 +135,13 @@ exports.analyzeLog = function (logContent) {
         };
     }
 
-    // 7. NVIDIA Driver Incompatibility (Sodium)
-    if (logContent.includes('The game failed to start because the currently installed NVIDIA Graphics Driver is not compatible')) {
+    // 7. GPU / Driver Incompatibility (Sodium / Iris / Modern OpenGL)
+    if (logContent.includes('Sodium Renderer - Unsupported Driver') ||
+        logContent.includes('UnsupportedPlatformException') ||
+        /The game failed to start because the currently installed (?:NVIDIA|Intel|AMD|.*) Graphics Driver is not compatible/i.test(logContent)) {
         return {
             type: 'gpu-driver-outdated',
-            file: 'NVIDIA Driver',
+            file: 'GPU Driver',
             descriptionKey: 'gpu-driver-outdated'
         };
     }

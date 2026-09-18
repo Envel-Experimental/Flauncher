@@ -154,6 +154,29 @@ describe('GameCrashHandler', () => {
             await handler.handleCrashFix({ type: 'missing-version-file', file: '1.16.5.json' })
             expect(fs.rmSync).toHaveBeenCalled()
         })
+
+        it('should handle gpu-driver-outdated fix by disabling graphics mods', async () => {
+            const ConfigManager = require('../../../../app/assets/js/core/configmanager')
+            const mockModule = {
+                rawModule: { name: 'Sodium', id: 'sodium' },
+                getVersionlessMavenIdentifier: () => 'me.jellysquid.mods:sodium'
+            }
+            handler.server.modules = [mockModule]
+            jest.spyOn(handler, 'restartGame').mockImplementation(() => {})
+
+            await handler.handleCrashFix({ type: 'gpu-driver-outdated' })
+
+            expect(ConfigManager.setModConfiguration).toHaveBeenCalledWith(
+                'test',
+                expect.objectContaining({
+                    mods: {
+                        'me.jellysquid.mods:sodium': { value: false }
+                    }
+                })
+            )
+            expect(ConfigManager.save).toHaveBeenCalled()
+            expect(handler.restartGame).toHaveBeenCalled()
+        })
     })
 
     describe('handleJavaRepair', () => {

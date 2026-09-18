@@ -402,6 +402,9 @@ class GameCrashHandler {
 
 
 
+        } else if (crashAnalysis.type === 'gpu-driver-outdated') {
+            await this.disableGraphicsMods()
+            this.restartGame()
         } else if (crashAnalysis.type === 'java-corruption') {
             await this.handleJavaRepair()
         } else {
@@ -418,6 +421,42 @@ class GameCrashHandler {
             }
             this.restartGame()
         }
+    }
+
+    /**
+     * Disable graphics and shader optimization mods (Sodium, Iris, Indium, etc.)
+     * to allow older GPUs with legacy OpenGL drivers to run Minecraft.
+     */
+    async disableGraphicsMods() {
+        const graphicsModKeywords = [
+            'sodium',
+            'iris',
+            'indium',
+            'lithium',
+            'reeses_sodium_options',
+            'cull_less_leaves',
+            'sodium_extra',
+            'embeddium',
+            'oculus'
+        ]
+
+        const modCfg = ConfigManager.getModConfiguration(this.server.rawServer.id) || { mods: {} }
+        if (!modCfg.mods) modCfg.mods = {}
+
+        if (Array.isArray(this.server.modules)) {
+            for (const mdl of this.server.modules) {
+                const identifier = (mdl.getVersionlessMavenIdentifier ? mdl.getVersionlessMavenIdentifier() : '').toLowerCase()
+                const rawName = (mdl.rawModule && (mdl.rawModule.name || mdl.rawModule.id) ? (mdl.rawModule.name || mdl.rawModule.id) : '').toLowerCase()
+
+                const isTarget = graphicsModKeywords.some(keyword => identifier.includes(keyword) || rawName.includes(keyword))
+                if (isTarget) {
+                    modCfg.mods[mdl.getVersionlessMavenIdentifier()] = { value: false }
+                }
+            }
+        }
+
+        ConfigManager.setModConfiguration(this.server.rawServer.id, modCfg)
+        await ConfigManager.save()
     }
 
     /**
@@ -575,6 +614,9 @@ class GameCrashHandler {
                     logger.info(`Resetting Java Executable due to wrong-java-version crash for server ${this.server.rawServer.id}`)
                     ConfigManager.setJavaExecutable(this.server.rawServer.id, null)
                     await ConfigManager.save()
+                } else if (analysis.type === 'gpu-driver-outdated') {
+                    logger.info(`Disabling graphics mods due to gpu-driver-outdated crash for server ${this.server.rawServer.id}`)
+                    await this.disableGraphicsMods()
                 }
                 // Add more fix types as needed
             }

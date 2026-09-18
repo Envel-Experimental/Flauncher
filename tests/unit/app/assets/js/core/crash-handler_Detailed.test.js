@@ -57,6 +57,20 @@ describe('CrashHandler Detailed Tests', () => {
             expect(result.type).toBe('java-oom')
         })
 
+        test('should detect gpu-driver-outdated from Sodium Unsupported Driver message', () => {
+            const log = 'net.caffeinemc.mods.sodium.client.render.SodiumWorldRenderer: Sodium Renderer - Unsupported Driver\nInstalled version: 42.52, Required version: 10.18.10.5161'
+            const result = CrashHandler.analyzeLog(log)
+            expect(result.type).toBe('gpu-driver-outdated')
+            expect(result.file).toBe('GPU Driver')
+        })
+
+        test('should detect gpu-driver-outdated from Intel/AMD driver incompatibility', () => {
+            const log = 'The game failed to start because the currently installed Intel Graphics Driver is not compatible'
+            const result = CrashHandler.analyzeLog(log)
+            expect(result.type).toBe('gpu-driver-outdated')
+            expect(result.file).toBe('GPU Driver')
+        })
+
         test('should detect gpu-oom', () => {
             const log = 'The NVIDIA OpenGL driver has encountered an out of memory error'
             const result = CrashHandler.analyzeLog(log)
