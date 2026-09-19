@@ -71,6 +71,14 @@ describe('CrashHandler Detailed Tests', () => {
             expect(result.file).toBe('GPU Driver')
         })
 
+        test('should detect gpu-driver-outdated from GLFW error 65545 NSGL pixel format failure on macOS', () => {
+            const log = 'GLFW error 65545: NSGL: Failed to find a suitable pixel format. Please make sure you have up-to-date drivers'
+            const result = CrashHandler.analyzeLog(log)
+            expect(result.type).toBe('gpu-driver-outdated')
+            expect(result.file).toBe('GPU Driver')
+            expect(result.descriptionKey).toBe('gpu-driver-outdated')
+        })
+
         test('should detect gpu-oom', () => {
             const log = 'The NVIDIA OpenGL driver has encountered an out of memory error'
             const result = CrashHandler.analyzeLog(log)
