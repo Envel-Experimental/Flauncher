@@ -178,7 +178,8 @@ describe('ConfigManager Detailed Tests', () => {
             expect(ConfigManager.getSettings()).toBeDefined()
             expect(ConfigManager.getSelectedServer()).toBeNull()
             expect(ConfigManager.getAuthAccounts()).toEqual({})
-            expect(ConfigManager.getMacOSCompatibility()).toBe(false)
+            const expectedCompat = process.platform === 'darwin' && process.arch === 'arm64'
+            expect(ConfigManager.getMacOSCompatibility()).toBe(expectedCompat)
         })
 
         test('should remember and save macOSCompatibility toggle setting', () => {
