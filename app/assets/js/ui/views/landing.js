@@ -44,6 +44,9 @@ export function toggleLaunchArea(loading) {
     } else {
         if (window.onReactLaunchComplete) window.onReactLaunchComplete();
 
+        const lDetailsText = document.getElementById('launch_details_text')
+        if (lDetailsText) lDetailsText.innerHTML = ''
+
         if (lower) {
             lower.style.display = 'flex'
             lower.style.visibility = 'visible'
@@ -704,12 +707,21 @@ async function dlAsync(login = true) {
 
         // Attach listeners for logs from Main
         let launchHandled = false
+        let launchWatchdog = null
+        const clearWatchdog = () => {
+            if (launchWatchdog) {
+                clearTimeout(launchWatchdog)
+                launchWatchdog = null
+            }
+        }
+
         const tempListener = (data) => {
             if (launchHandled || typeof data !== 'string') return
             const lines = data.split(/\r?\n/)
             for (const line of lines) {
                 if (GAME_LAUNCH_REGEX.test(line.trim())) {
                     launchHandled = true
+                    clearWatchdog()
                     const diff = Date.now() - start
                     if (diff < MIN_LINGER) {
                         setTimeout(() => toggleLaunchArea(false), MIN_LINGER - diff)
@@ -723,6 +735,7 @@ async function dlAsync(login = true) {
 
         const gameErrorListener = (data) => {
             if (data.indexOf('Could not find or load main class net.minecraft.launchwrapper.Launch') > -1) {
+                clearWatchdog()
                 loggerLaunchSuite.error('Game launch failed, LaunchWrapper was not downloaded properly.')
                 showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'), Lang.queryJS('landing.dlAsync.launchWrapperNotDownloaded'))
             }
@@ -733,15 +746,19 @@ async function dlAsync(login = true) {
         let hasExited = false
         window.HeliosAPI.launcher.onExit((code) => {
             hasExited = true
+            clearWatchdog()
             loggerLaunchSuite.warn(`Game exited with code ${code}. Resetting UI.`)
+            setLaunchDetails('')
             toggleLaunchArea(false)
         })
 
-        // Do not print game logs to renderer console. 
-        // Doing so causes a massive IPC loop (Main->Renderer->Main) that freezes the UI.
-        // window.HeliosAPI.launcher.onLog((data) => {
-        //     console.log('[Minecraft] ' + data)
-        // })
+        // Safety fallback watchdog: if game doesn't signal ready within 35 seconds, restore UI
+        launchWatchdog = setTimeout(() => {
+            if (!launchHandled && !hasExited) {
+                loggerLaunchSuite.warn('Launch watchdog timeout reached. Resetting launch button state.')
+                toggleLaunchArea(false)
+            }
+        }, 35000)
 
         // For E2E tests
         window.activeMinecraftProcess = {
@@ -761,6 +778,7 @@ async function dlAsync(login = true) {
             }
 
         } catch (err) {
+            clearWatchdog()
             loggerLaunchSuite.error('Error during launch', err)
             showLaunchFailure(Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'), Lang.queryJS('landing.dlAsync.checkConsoleForDetails'))
         }

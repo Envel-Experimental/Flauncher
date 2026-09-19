@@ -135,9 +135,12 @@ exports.analyzeLog = function (logContent) {
         };
     }
 
-    // 7. GPU / Driver Incompatibility (Sodium / Iris / Modern OpenGL)
+    // 7. GPU / Driver Incompatibility (Sodium / Iris / Modern OpenGL / GLFW NSGL)
     if (logContent.includes('Sodium Renderer - Unsupported Driver') ||
         logContent.includes('UnsupportedPlatformException') ||
+        logContent.includes('Failed to find a suitable pixel format') ||
+        logContent.includes('GLFW error 65545') ||
+        logContent.includes('NSGL: Failed to find a suitable pixel format') ||
         /The game failed to start because the currently installed (?:NVIDIA|Intel|AMD|.*) Graphics Driver is not compatible/i.test(logContent)) {
         return {
             type: 'gpu-driver-outdated',

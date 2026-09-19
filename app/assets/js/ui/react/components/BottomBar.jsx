@@ -44,6 +44,17 @@ const BottomBar = () => {
       setIsCooldown(false);
     };
 
+    const handleExit = () => {
+      setLaunchStatus(null);
+      setLaunchPercent(null);
+      setIsCooldown(false);
+      setIsPlaying(false);
+    };
+
+    if (window.HeliosAPI?.launcher?.onExit) {
+      window.HeliosAPI.launcher.onExit(handleExit);
+    }
+
     // Attempt to load distributions from Helios ConfigManager/DistroAPI
     if (window.DistroAPI) {
       window.DistroAPI.getDistribution().then((distro) => {
