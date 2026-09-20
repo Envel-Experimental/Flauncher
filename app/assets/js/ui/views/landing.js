@@ -708,6 +708,29 @@ async function dlAsync(login = true) {
         // Attach listeners for logs from Main
         let launchHandled = false
         let launchWatchdog = null
+
+        const resetWatchdog = (timeoutMs = 60000) => {
+            if (launchWatchdog) {
+                clearTimeout(launchWatchdog)
+            }
+            launchWatchdog = setTimeout(async () => {
+                if (!launchHandled && !hasExited) {
+                    loggerLaunchSuite.warn('Launch watchdog timeout reached. Resetting launch button state.')
+                    setLaunchDetails('')
+                    toggleLaunchArea(false)
+                    try {
+                        await window.HeliosAPI.launcher.terminate()
+                    } catch (e) {
+                        // Ignore termination error
+                    }
+                    showLaunchFailure(
+                        Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'),
+                        Lang.queryJS('landing.dlAsync.checkConsoleForDetails')
+                    )
+                }
+            }, timeoutMs)
+        }
+
         const clearWatchdog = () => {
             if (launchWatchdog) {
                 clearTimeout(launchWatchdog)
@@ -718,6 +741,9 @@ async function dlAsync(login = true) {
         const tempListener = (data) => {
             if (typeof data === 'string' && data.length > 0) {
                 console.log('[Minecraft]:', data)
+                if (!launchHandled && !hasExited) {
+                    resetWatchdog(45000)
+                }
             }
             if (launchHandled || typeof data !== 'string') return
             const lines = data.split(/\r?\n/)
@@ -747,34 +773,31 @@ async function dlAsync(login = true) {
             }
         }
 
-        window.HeliosAPI.launcher.onLog(tempListener)
-        window.HeliosAPI.launcher.onLogError(gameErrorListener)
+        if (typeof window._unsubLauncherLog === 'function') window._unsubLauncherLog()
+        if (typeof window._unsubLauncherLogError === 'function') window._unsubLauncherLogError()
+        if (typeof window._unsubLauncherExit === 'function') window._unsubLauncherExit()
+
+        window._unsubLauncherLog = window.HeliosAPI.launcher.onLog(tempListener)
+        window._unsubLauncherLogError = window.HeliosAPI.launcher.onLogError(gameErrorListener)
         let hasExited = false
-        window.HeliosAPI.launcher.onExit((code) => {
+        window._unsubLauncherExit = window.HeliosAPI.launcher.onExit((code) => {
             hasExited = true
             clearWatchdog()
             loggerLaunchSuite.warn(`Game exited with code ${code}. Resetting UI.`)
             setLaunchDetails('')
             toggleLaunchArea(false)
+            if (typeof window._unsubLauncherLog === 'function') {
+                window._unsubLauncherLog()
+                window._unsubLauncherLog = null
+            }
+            if (typeof window._unsubLauncherLogError === 'function') {
+                window._unsubLauncherLogError()
+                window._unsubLauncherLogError = null
+            }
         })
 
-        // Safety fallback watchdog: if game doesn't signal ready within 35 seconds, restore UI
-        launchWatchdog = setTimeout(async () => {
-            if (!launchHandled && !hasExited) {
-                loggerLaunchSuite.warn('Launch watchdog timeout reached. Resetting launch button state.')
-                setLaunchDetails('')
-                toggleLaunchArea(false)
-                try {
-                    await window.HeliosAPI.launcher.terminate()
-                } catch (e) {
-                    // Ignore termination error
-                }
-                showLaunchFailure(
-                    Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'),
-                    Lang.queryJS('landing.dlAsync.checkConsoleForDetails')
-                )
-            }
-        }, 35000)
+        // Safety fallback watchdog: if game doesn't signal ready within 60 seconds, restore UI
+        resetWatchdog(60000)
 
         // For E2E tests
         window.activeMinecraftProcess = {

@@ -103,9 +103,21 @@ contextBridge.exposeInMainWorld('HeliosAPI', {
     launcher: {
         launch: (options) => ipcRenderer.invoke('launcher:launch', options),
         showOpenDialog: (options) => ipcRenderer.invoke('launcher:showOpenDialog', options),
-        onLog: (callback) => ipcRenderer.on('launcher:log', (e, data) => callback(data)),
-        onLogError: (callback) => ipcRenderer.on('launcher:log-error', (e, data) => callback(data)),
-        onExit: (callback) => ipcRenderer.on('launcher:exit', (e, code) => callback(code)),
+        onLog: (callback) => {
+            const listener = (e, data) => callback(data)
+            ipcRenderer.on('launcher:log', listener)
+            return () => ipcRenderer.removeListener('launcher:log', listener)
+        },
+        onLogError: (callback) => {
+            const listener = (e, data) => callback(data)
+            ipcRenderer.on('launcher:log-error', listener)
+            return () => ipcRenderer.removeListener('launcher:log-error', listener)
+        },
+        onExit: (callback) => {
+            const listener = (e, code) => callback(code)
+            ipcRenderer.on('launcher:exit', listener)
+            return () => ipcRenderer.removeListener('launcher:exit', listener)
+        },
         terminate: () => ipcRenderer.send('launcher:terminate')
     },
     // System & OS Info (Safe versions)
