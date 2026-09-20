@@ -40,6 +40,16 @@ describe('CrashHandler', () => {
                 descriptionKey: 'missing-version-file'
             });
         });
+
+        it('should detect macOS architecture mismatch and dlopen errors', () => {
+            const log = "java.lang.UnsatisfiedLinkError: /path/to/lib.dylib (mach-o file, but is an incompatible architecture (have 'x86_64', need 'arm64'))";
+            const result = CrashHandler.analyzeLog(log);
+            expect(result).toEqual({
+                type: 'arch-mismatch',
+                file: 'Native Architecture',
+                descriptionKey: 'arch-mismatch'
+            });
+        });
     });
 
     describe('analyzeFile (asynchronous with partial read)', () => {

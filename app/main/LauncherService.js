@@ -81,7 +81,12 @@ class LauncherService {
             }
 
             this.activeProcess.stdout.on('data', (data) => logBatcher.enqueue(data))
-            this.activeProcess.stderr.on('data', (data) => logBatcher.enqueue(data))
+            this.activeProcess.stderr.on('data', (data) => {
+                logBatcher.enqueue(data)
+                if (event && event.sender && !event.sender.isDestroyed()) {
+                    event.sender.send('launcher:log-error', data.toString())
+                }
+            })
 
             this.activeProcess.on('close', (code, signal) => {
                 logBatcher.flush()

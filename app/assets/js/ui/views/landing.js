@@ -716,6 +716,9 @@ async function dlAsync(login = true) {
         }
 
         const tempListener = (data) => {
+            if (typeof data === 'string' && data.length > 0) {
+                console.log('[Minecraft]:', data)
+            }
             if (launchHandled || typeof data !== 'string') return
             const lines = data.split(/\r?\n/)
             for (const line of lines) {
@@ -734,6 +737,9 @@ async function dlAsync(login = true) {
         }
 
         const gameErrorListener = (data) => {
+            if (typeof data === 'string' && data.length > 0) {
+                console.error('[Minecraft Error]:', data)
+            }
             if (data.indexOf('Could not find or load main class net.minecraft.launchwrapper.Launch') > -1) {
                 clearWatchdog()
                 loggerLaunchSuite.error('Game launch failed, LaunchWrapper was not downloaded properly.')
@@ -753,10 +759,20 @@ async function dlAsync(login = true) {
         })
 
         // Safety fallback watchdog: if game doesn't signal ready within 35 seconds, restore UI
-        launchWatchdog = setTimeout(() => {
+        launchWatchdog = setTimeout(async () => {
             if (!launchHandled && !hasExited) {
                 loggerLaunchSuite.warn('Launch watchdog timeout reached. Resetting launch button state.')
+                setLaunchDetails('')
                 toggleLaunchArea(false)
+                try {
+                    await window.HeliosAPI.launcher.terminate()
+                } catch (e) {
+                    // Ignore termination error
+                }
+                showLaunchFailure(
+                    Lang.queryJS('landing.dlAsync.errorDuringLaunchTitle'),
+                    Lang.queryJS('landing.dlAsync.checkConsoleForDetails')
+                )
             }
         }, 35000)
 

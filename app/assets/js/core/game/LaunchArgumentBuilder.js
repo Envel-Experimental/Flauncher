@@ -136,6 +136,11 @@ class LaunchArgumentBuilder {
                 jvmArgs.push('-Xdock:name=FLauncher')
                 jvmArgs.push('-Xdock:icon=' + path.join(__dirname, '..', '..', '..', 'app', 'assets', 'images', 'minecraft.icns'))
             }
+
+            const hasHeadless = jvmArgs.some(arg => typeof arg === 'string' && arg.includes('java.awt.headless'))
+            if (!hasHeadless) {
+                jvmArgs.push('-Djava.awt.headless=true')
+            }
         }
 
         // 1.5 Add native library path if not already present
@@ -232,7 +237,10 @@ class LaunchArgumentBuilder {
                     
                     // Fix spaces in properties (e.g. -Dprop= value -> -Dprop=value)
                     if (arg.startsWith('-D') && arg.includes('=')) {
-                        arg = arg.replace(/=\s+/, '=')
+                        const eqIdx = arg.indexOf('=')
+                        const propKey = arg.substring(0, eqIdx).trim()
+                        const propVal = arg.substring(eqIdx + 1).trim()
+                        arg = `${propKey}=${propVal}`
                     }
                     const matches = [...arg.matchAll(/\${(.*?)}/g)]
                     let resolved = arg

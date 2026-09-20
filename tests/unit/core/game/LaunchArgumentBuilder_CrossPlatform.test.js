@@ -69,13 +69,15 @@ describe('LaunchArgumentBuilder Cross-Platform', () => {
         Object.defineProperty(process, 'platform', { value: 'darwin' })
         Object.defineProperty(process, 'arch', { value: 'arm64' })
 
-        const builder = new LaunchArgumentBuilder(mockServer, mockVanilla, { arguments: { jvm: [], game: [] } }, mockUser, '1.0.0', '/game', '/common')
+        const builder = new LaunchArgumentBuilder(mockServer, mockVanilla, { arguments: { jvm: ['-DFabricMcEmu= net.minecraft.client.main.Main '], game: [] } }, mockUser, '1.0.0', '/game', '/common')
         builder.classpathArg = jest.fn().mockResolvedValue(['cp.jar'])
 
         const args = await builder.constructJVMArguments([], '/natives', false, false, null)
         
         expect(args).toContain('-XstartOnFirstThread')
         expect(args).toContain('-Djava.library.path=/natives')
+        expect(args).toContain('-Djava.awt.headless=true')
+        expect(args).toContain('-DFabricMcEmu=net.minecraft.client.main.Main')
     })
 
     test('Windows X64 should NOT include -XstartOnFirstThread', async () => {

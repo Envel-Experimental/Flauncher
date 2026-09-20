@@ -221,6 +221,18 @@ exports.analyzeLog = function (logContent) {
         };
     }
 
+    // 14. Architecture / Native Library Incompatibility (macOS ARM64 vs x86_64, Bad CPU type)
+    if (logContent.includes('mach-o file, but is an incompatible architecture') ||
+        logContent.includes('Bad CPU type in executable') ||
+        logContent.includes('Library not loaded') ||
+        (logContent.includes('dlopen') && logContent.includes('symbol not found'))) {
+        return {
+            type: 'arch-mismatch',
+            file: 'Native Architecture',
+            descriptionKey: 'arch-mismatch'
+        };
+    }
+
     return null;
 }
 

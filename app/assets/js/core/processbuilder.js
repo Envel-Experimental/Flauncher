@@ -245,8 +245,9 @@ class ProcessBuilder {
         const currentSystemTemp = os.tmpdir()
         let nativeBasePath = currentSystemTemp
         const isWindows = process.platform === 'win32'
+        const isMac = process.platform === 'darwin'
 
-        if ((isWindows && currentSystemTemp.includes('~')) || !pathutil.isPathValid(currentSystemTemp)) {
+        if (isMac || (isWindows && currentSystemTemp.includes('~')) || !pathutil.isPathValid(currentSystemTemp)) {
             nativeBasePath = path.join(this.commonDir, 'temp_natives')
             try {
                 fs.mkdirSync(nativeBasePath, { recursive: true })
