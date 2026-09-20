@@ -742,7 +742,7 @@ async function dlAsync(login = true) {
             if (typeof data === 'string' && data.length > 0) {
                 console.log('[Minecraft]:', data)
                 if (!launchHandled && !hasExited) {
-                    resetWatchdog(45000)
+                    resetWatchdog(60000)
                 }
             }
             if (launchHandled || typeof data !== 'string') return
@@ -796,8 +796,8 @@ async function dlAsync(login = true) {
             }
         })
 
-        // Safety fallback watchdog: if game doesn't signal ready within 60 seconds, restore UI
-        resetWatchdog(60000)
+        // Safety fallback watchdog: if game doesn't signal ready within 120 seconds, restore UI
+        resetWatchdog(120000)
 
         // For E2E tests
         window.activeMinecraftProcess = {

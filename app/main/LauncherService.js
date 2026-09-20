@@ -27,6 +27,16 @@ class LauncherService {
 
     async launch(event, serverId, authUser) {
         log.info(`Preparing launch for server: ${serverId}`)
+
+        if (this.activeProcess) {
+            log.warn('A game process is already active. Terminating previous instance before new launch.')
+            try {
+                this.activeProcess.kill()
+            } catch (e) {
+                log.error('Failed to kill previous activeProcess:', e)
+            }
+            this.activeProcess = null
+        }
         
         const DistroManager = require('../assets/js/core/distromanager')
         const distro = await DistroManager.getDistribution()
