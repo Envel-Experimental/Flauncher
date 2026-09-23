@@ -45,10 +45,10 @@ exports.analyzeLog = function (logContent) {
     let match;
 
     // 1. Config Loading Exception (Specific & Generic)
-    // Matches: "ModConfig$ConfigLoadingException: ... farmersdelight-client.toml"
-    // Regex logic: Find "ConfigLoadingException" OR "Failed loading config", 
+    // Matches: "ModConfig$ConfigLoadingException: ... farmersdelight-client.toml" or "Failed to load Forge Config API Port config from .\config\forgeconfigapiport.toml"
+    // Regex logic: Find "ConfigLoadingException", "Failed loading config", or "Failed to load ... config",
     // then ignore everything until the first .toml filename found (that doesn't have spaces).
-    const configErrorRegex = /(?:ConfigLoadingException|Failed loading config file)[\s\S]*?([^\s]+\.toml)/i;
+    const configErrorRegex = /(?:ConfigLoadingException|Failed loading config|Failed to load\s+.*?\s+config\s+from)[\s\S]*?([^\s]+\.toml)/i;
     match = configErrorRegex.exec(logContent);
     if (match && match[1]) {
         return {

@@ -24,6 +24,13 @@ describe('CrashHandler Detailed Tests', () => {
             expect(result.file).toBe('farmersdelight-client.toml')
         })
 
+        test('should detect corrupted-config from Forge Config API Port runtime exception', () => {
+            const log = 'Caused by: java.lang.RuntimeException: Failed to load Forge Config API Port config from .\\config\\forgeconfigapiport.toml\nCaused by: com.electronwill.nightconfig.core.io.ParsingException: Not enough data available'
+            const result = CrashHandler.analyzeLog(log)
+            expect(result.type).toBe('corrupted-config')
+            expect(result.file).toBe('forgeconfigapiport.toml')
+        })
+
         test('should detect corrupted-config from MalformedInputException', () => {
             const log = 'Loading farmersdelight-client.toml\n... java.nio.charset.MalformedInputException: Input length = 1'
             const result = CrashHandler.analyzeLog(log)
