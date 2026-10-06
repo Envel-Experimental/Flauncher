@@ -41,6 +41,12 @@ async function readLastBytes(filePath, maxBytes = 1024 * 200) {
  * @param {string} logContent The content of the latest.log file.
  * @returns {object | null} An object with crash details, or null if no known pattern is found.
  */
+function getBaseName(filePath) {
+    if (!filePath) return '';
+    const normalized = filePath.replace(/\\/g, '/');
+    return path.posix.basename(normalized);
+}
+
 exports.analyzeLog = function (logContent) {
     let match;
 
@@ -53,9 +59,9 @@ exports.analyzeLog = function (logContent) {
     if (match && match[1]) {
         return {
             type: 'corrupted-config',
-            file: path.basename(match[1]),
+            file: getBaseName(match[1]),
             descriptionKey: 'corrupted-config',
-            descriptionArgs: { file: path.basename(match[1]) }
+            descriptionArgs: { file: getBaseName(match[1]) }
         };
     }
 
@@ -77,9 +83,9 @@ exports.analyzeLog = function (logContent) {
                 const culpritFile = tomlMatches[tomlMatches.length - 1][1];
                 return {
                     type: 'corrupted-config',
-                    file: path.basename(culpritFile),
+                    file: getBaseName(culpritFile),
                     descriptionKey: 'corrupted-config-parsing',
-                    descriptionArgs: { file: path.basename(culpritFile) }
+                    descriptionArgs: { file: getBaseName(culpritFile) }
                 };
             }
         }
@@ -93,9 +99,9 @@ exports.analyzeLog = function (logContent) {
     if (match && match[1]) {
         return {
             type: 'corrupted-config',
-            file: path.basename(match[1]),
+            file: getBaseName(match[1]),
             descriptionKey: 'corrupted-config-syntax',
-            descriptionArgs: { file: path.basename(match[1]) }
+            descriptionArgs: { file: getBaseName(match[1]) }
         };
     }
 
@@ -105,9 +111,9 @@ exports.analyzeLog = function (logContent) {
     if (match && match[1]) {
         return {
             type: 'corrupted-config',
-            file: path.basename(match[1]),
+            file: getBaseName(match[1]),
             descriptionKey: 'corrupted-config-generic',
-            descriptionArgs: { file: path.basename(match[1]) }
+            descriptionArgs: { file: getBaseName(match[1]) }
         };
     }
 
