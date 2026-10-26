@@ -408,19 +408,123 @@ class GameCrashHandler {
         } else if (crashAnalysis.type === 'java-corruption') {
             await this.handleJavaRepair()
         } else {
-            // Config file corruption
-            const configPath = path.resolve(this.gameDir, 'config', crashAnalysis.file || '')
-            const configDir = path.join(this.gameDir, 'config')
-            const relative = path.relative(configDir, configPath)
-            const isSafe = relative && !relative.startsWith('..') && !path.isAbsolute(relative)
-
-            if (isSafe && fs.existsSync(configPath)) {
-                const disabledPath = configPath + '.disabled'
-                if (fs.existsSync(disabledPath)) fs.unlinkSync(disabledPath)
-                fs.renameSync(configPath, disabledPath)
+            const fixResult = await this.safeRemoveOrResetConfig(crashAnalysis.file)
+            if (fixResult.success) {
+                await this.restartGame()
+            } else {
+                await this.showLockedFileOverlay(crashAnalysis.file || 'config')
             }
-            this.restartGame()
         }
+    }
+
+    /**
+     * Safely attempts to rename, unlink, or reset a corrupted configuration file.
+     * Retries with backoff if the file is locked by a lingering Java process or antivirus.
+     */
+    async safeRemoveOrResetConfig(fileName) {
+        if (!fileName) return { success: true }
+
+        const configDir = path.join(this.gameDir, 'config')
+        const candidates = [
+            path.resolve(configDir, fileName),
+            path.resolve(this.gameDir, fileName)
+        ]
+
+        let targetPath = null
+        for (const candidate of candidates) {
+            const isSafe = !path.relative(this.gameDir, candidate).startsWith('..')
+            if (isSafe && fs.existsSync(candidate)) {
+                targetPath = candidate
+                break
+            }
+        }
+
+        if (!targetPath) {
+            return { success: true }
+        }
+
+        const maxRetries = 5
+        let lastError = null
+
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const disabledPath = targetPath + '.disabled'
+                if (fs.existsSync(disabledPath)) {
+                    try { fs.unlinkSync(disabledPath) } catch (e) { }
+                }
+                fs.renameSync(targetPath, disabledPath)
+                logger.info(`Successfully renamed corrupted config to ${disabledPath}`)
+                return { success: true, path: targetPath }
+            } catch (err) {
+                lastError = err
+                const isLock = err.code === 'EBUSY' || err.code === 'EPERM' || err.code === 'EACCES'
+
+                try {
+                    fs.unlinkSync(targetPath)
+                    logger.info(`Successfully unlinked corrupted config ${targetPath}`)
+                    return { success: true, path: targetPath }
+                } catch (unlinkErr) {
+                    lastError = unlinkErr
+                }
+
+                try {
+                    fs.writeFileSync(targetPath, '', 'utf8')
+                    logger.info(`Successfully truncated corrupted config ${targetPath}`)
+                    return { success: true, path: targetPath }
+                } catch (writeErr) {
+                    lastError = writeErr
+                }
+
+                if (isLock && i < maxRetries - 1) {
+                    const delay = 200 * (i + 1)
+                    logger.warn(`Config file ${targetPath} locked (${err.code}). Retrying in ${delay}ms (${i + 1}/${maxRetries})...`)
+                    await new Promise(res => setTimeout(res, delay))
+                }
+            }
+        }
+
+        logger.error(`Failed to remove or reset config ${targetPath} after ${maxRetries} attempts:`, lastError)
+        return { success: false, reason: 'locked', path: targetPath, error: lastError }
+    }
+
+    /**
+     * Shows overlay instructing user to reboot if a locked file cannot be modified.
+     */
+    async showLockedFileOverlay(fileName) {
+        const title = 'Файл заблокирован системой'
+        const body = `Не удалось исправить файл <b>${fileName}</b>, так как он используется другим процессом (например, зависшей игрой или антивирусом).<br><br>Пожалуйста, <b>перезагрузите компьютер</b>. После перезагрузки файл освободится, и игра сможет запуститься.`
+
+        await this._callUI('setOverlayContent',
+            title,
+            body,
+            'Понятно',
+            'Перезапустить лаунчер'
+        )
+
+        if (process.type === 'renderer') {
+            if (typeof window !== 'undefined') {
+                if (window.setOverlayHandler) window.setOverlayHandler(() => window.toggleOverlay(false))
+                if (window.setMiddleButtonHandler) {
+                    window.setMiddleButtonHandler(() => {
+                        const { ipcRenderer } = require('electron')
+                        ipcRenderer.send('app:restart')
+                    })
+                }
+                if (window.setDismissHandler) window.setDismissHandler(() => window.toggleOverlay(false))
+            }
+        } else {
+            const { ipcMain } = require('electron')
+            ipcMain.removeAllListeners('ui:dismiss-locked')
+            ipcMain.removeAllListeners('ui:restart-app')
+            ipcMain.once('ui:dismiss-locked', () => this._callUI('toggleOverlay', false))
+            ipcMain.once('ui:restart-app', () => {
+                ipcMain.emit('app:restart')
+            })
+            await this._callUI('setOverlayHandler', 'ui:dismiss-locked')
+            await this._callUI('setMiddleButtonHandler', 'ui:restart-app')
+            await this._callUI('setDismissHandler', null)
+        }
+        await this._callUI('toggleOverlay', true, true)
     }
 
     /**
@@ -604,11 +708,7 @@ class GameCrashHandler {
                     }
                 } else if (analysis.type === 'corrupted-config') {
                     if (analysis.file) {
-                        const configFile = path.join(this.gameDir, analysis.file)
-                        if (fs.existsSync(configFile)) {
-                            logger.info(`Deleting corrupted config: ${configFile}`)
-                            fs.unlinkSync(configFile)
-                        }
+                        await this.safeRemoveOrResetConfig(analysis.file)
                     }
                 } else if (analysis.type === 'wrong-java-version') {
                     logger.info(`Resetting Java Executable due to wrong-java-version crash for server ${this.server.rawServer.id}`)

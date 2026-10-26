@@ -45,33 +45,50 @@ async function runCommand(cmd, args, options = {}) {
     });
 }
 
-async function validateLocalFile(filePath, algo, hash, expectedSize, requireHash = false) {
-    if (hash == null) {
-        if (requireHash) {
-            // console.debug(`[Security] No hash provided for ${filePath}. Skipping validation.`);
+async function validateLocalFile(filePath, algo, hash, expectedSize, requireHash = false, maxRetries = 3) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await _executeValidateLocalFile(filePath, algo, hash, expectedSize, requireHash);
+        } catch (err) {
+            const isLock = err && (err.code === 'EBUSY' || err.code === 'EPERM' || err.code === 'EACCES');
+            if (isLock && attempt < maxRetries) {
+                const delay = 150 * (attempt + 1);
+                await new Promise(r => setTimeout(r, delay));
+                continue;
+            }
             return false;
         }
-        
+    }
+    return false;
+}
+
+async function _executeValidateLocalFile(filePath, algo, hash, expectedSize, requireHash = false) {
+    if (hash == null) {
+        if (requireHash) {
+            return false;
+        }
+
         try {
             const stat = await fs.stat(filePath);
             if (expectedSize && stat.size !== expectedSize) {
                 return false;
             }
         } catch (e) {
-            return false;
+            if (e.code === 'ENOENT') return false;
+            throw e;
         }
-        
+
         return true;
     }
 
     try {
         const stat = await fs.stat(filePath);
         if (expectedSize && stat.size !== expectedSize) {
-            // console.debug(`[FileUtils] Size mismatch for ${path.basename(filePath)}: Expected ${expectedSize}, Got ${stat.size}`);
             return false;
         }
     } catch (e) {
-        return false;
+        if (e.code === 'ENOENT') return false;
+        throw e;
     }
 
     return new Promise((resolve, reject) => {
@@ -81,7 +98,7 @@ async function validateLocalFile(filePath, algo, hash, expectedSize, requireHash
                 throw new Error('Algorithm must be a string');
             }
             algorithm = algo.toLowerCase().replace('-', '');
-            crypto.createHash(algorithm); // Test if available
+            crypto.createHash(algorithm);
         } catch (e) {
             console.error(`[FileUtils] Unsupported or missing hash algorithm: ${algo}`);
             return resolve(false);
@@ -91,7 +108,12 @@ async function validateLocalFile(filePath, algo, hash, expectedSize, requireHash
         const hashStream = crypto.createHash(algorithm);
 
         stream.on('error', err => {
-            resolve(false);
+            const isLock = err && (err.code === 'EBUSY' || err.code === 'EPERM' || err.code === 'EACCES');
+            if (isLock) {
+                reject(err);
+            } else {
+                resolve(false);
+            }
         });
 
         hashStream.on('error', err => {

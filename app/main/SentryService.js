@@ -39,6 +39,8 @@ class SentryService {
                         if (
                             message.includes('is not signed by the application owner') ||
                             message.includes('fs:statfs') ||
+                            message.includes('/proc/meminfo') ||
+                            message.includes('sodium-native.node') ||
                             message.includes('ERR_CONNECTION_RESET') ||
                             message.includes('ENOSPC') ||
                             message.includes('EPERM') ||

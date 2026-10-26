@@ -391,9 +391,9 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
             if (asset.id) headers.append('X-File-Id', asset.id);
             if (hash) headers.append('X-File-Hash', hash);
 
-            // Force HTTP after 2 failed attempts or if explicitly requested (deferral)
+            // Force HTTP after 1 failed attempt or if explicitly requested (deferral)
             // But NOT if we are in P2P Only Mode (where HTTP is blocked anyway)
-            if ((attempt >= 2 || forceHTTP) && !noServers) {
+            if ((attempt >= 1 || forceHTTP) && !noServers) {
                 headers.append('X-Skip-P2P', 'true');
             }
 
@@ -410,6 +410,12 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
             while (activeWrites >= MAX_CONCURRENT_WRITES) {
                 await sleep(4);
             }
+            // Resumption safety: only append if response was partial (206) or P2P with offset
+            const isPartialResponse = (response.p2pStream && startOffset > 0) || response.status === 206;
+            if (!isPartialResponse && startOffset > 0) {
+                startOffset = 0;
+            }
+
             // Progress tracking wrapper
             let loaded = startOffset;
             const total = asset.size || 0;
@@ -418,7 +424,7 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
             let fileStream;
             try {
                 try {
-                    fileStream = fsSync.createWriteStream(tempPath, { flags: startOffset > 0 ? 'a' : 'w' });
+                    fileStream = fsSync.createWriteStream(tempPath, { flags: isPartialResponse && startOffset > 0 ? 'a' : 'w' });
                 } catch (e) {
                     throw e;
                 }
@@ -552,24 +558,33 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
                 logFn(`[DownloadEngine] Validation failed for ${asset.id}. File size: ${loaded} / ${total}`)
             }
 
-            // DEBUG: Inspect contents and delete temp
+            // Inspect contents and delete temp
+            let preview = '';
             try {
                 const fd = await fs.open(tempPath, 'r');
                 const buffer = Buffer.alloc(100);
                 const { bytesRead } = await fd.read(buffer, 0, 100, 0);
                 await fd.close();
 
-                const preview = buffer.slice(0, bytesRead).toString('utf-8');
+                preview = buffer.slice(0, bytesRead).toString('utf-8');
                 console.error(`[DownloadEngine] Failed File Content Preview (First 100 bytes): ${preview}`);
                 await fs.unlink(tempPath);
             } catch (e) { /* Preview failed */ }
 
-            const validationError = new Error('Validation failed');
+            const isHtmlBlock = preview.includes('<!DOCTYPE') || preview.includes('<html') || preview.includes('<title>');
+            if (isHtmlBlock) {
+                log.warn(`[DownloadEngine] Mirror returned HTML block page instead of binary for ${asset.id}: ${currentUrl}`);
+            }
+
+            // Immediately report failure to MirrorManager so this mirror is deprioritized
+            MirrorManager.reportFailure(currentUrl, isHtmlBlock ? 502 : 409);
+
+            const validationError = new Error(`Validation failed for ${asset.id}`);
             attemptHistory.push({
                 attempt: attempt + 1,
                 url: currentUrl,
                 method: headers.has('X-Skip-P2P') ? 'HTTP' : 'Race(P2P+HTTP)',
-                error: `Hash Mismatch (Got ${loaded} bytes)`
+                error: isHtmlBlock ? 'Server returned HTML block page' : `Hash Mismatch (Got ${loaded} bytes)`
             });
             throw validationError;
 
@@ -579,7 +594,7 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
             // On failure, do NOT delete .tmp if it's a P2P error (we might resume later)
             // But if it's a validation error (hash mismatch on full file), we MUST delete it.
             const isValidationError = err.code === 'HASH_MISMATCH' || 
-                                      err.message === 'Validation failed' || 
+                                      (err.message && err.message.includes('Validation failed')) || 
                                       (err.message && err.message.toLowerCase().includes('hash mismatch'));
 
             if (isValidationError) {
@@ -591,13 +606,12 @@ async function downloadFile(asset, onProgress, forceHTTP = false, instantDefer =
                 attemptHistory.push({
                     attempt: attempt + 1,
                     url: currentUrl,
-                    method: 'Unknown', // Headers scope is limited, simplifying for safety or need to recalc
+                    method: 'Unknown',
                     error: err.message
                 });
 
                 if (isDev) log.debug(`[DownloadEngine] Attempt ${attempt + 1} failed for ${asset.id}: ${err.message}`);
                 
-                // Report Failure to MirrorManager (network or validation error)
                 MirrorManager.reportFailure(currentUrl, err.status);
             }
 

@@ -57,6 +57,9 @@ function getAvailableRamGb() {
         } else if (platform === 'linux') {
             // On Linux, /proc/meminfo provides a direct 'MemAvailable' value.
             // Using direct file reading is safer and faster than exec('grep').
+            if (typeof fs.existsSync === 'function' && !fs.existsSync('/proc/meminfo')) {
+                return resolve(os.freemem() / BYTES_PER_GB)
+            }
             fs.readFile('/proc/meminfo', 'utf-8', (err, data) => {
                 if (err || !data) {
                     // Fallback for older kernels without MemAvailable.

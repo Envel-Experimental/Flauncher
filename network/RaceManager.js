@@ -33,6 +33,7 @@ class RaceManager {
             this.successBuffer = []
             this.successFlushTimer = null
         }, 1000)
+        if (this.successFlushTimer.unref) this.successFlushTimer.unref()
     }
 
     logFailure(hash, relPath, context) {
@@ -72,6 +73,7 @@ class RaceManager {
             this.failureBuffer = []
             this.failureFlushTimer = null
         }, 2000)
+        if (this.failureFlushTimer.unref) this.failureFlushTimer.unref()
     }
 
     isBusy() {

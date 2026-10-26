@@ -205,7 +205,13 @@ class MirrorManager {
         if (entry) {
             if (statusCode === 404) return
             entry.failures++
-            if (entry.failures >= 15) {
+            if (statusCode === 409 || statusCode === 502) {
+                entry.latency += 500
+                if (entry.failures >= 3) {
+                    entry.status = 'slow'
+                    this._sortMirrors()
+                }
+            } else if (entry.failures >= 5) {
                 entry.status = 'down'
                 entry.latency = 9999
                 this._sortMirrors()

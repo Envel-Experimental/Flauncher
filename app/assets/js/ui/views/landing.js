@@ -648,9 +648,13 @@ async function dlAsync(login = true) {
         loggerLaunchSuite.warn('Error during file download via Main Process.', err)
 
         const isDiskFull = err.message && (err.message.includes('ENOSPC') || err.message.includes('no space left'))
-        const errorText = isDiskFull 
-            ? 'На диске недостаточно места для загрузки файлов игры. Пожалуйста, освободите пространство.' 
-            : err.message
+        let errorText = err.message || ''
+        errorText = errorText.replace(/^Error invoking remote method 'dl:start':\s*(Error:\s*)?/, '')
+        if (isDiskFull) {
+            errorText = 'На диске недостаточно места для загрузки файлов игры. Пожалуйста, освободите пространство.'
+        } else if (errorText.includes('Validation failed')) {
+            errorText = 'Не удалось проверить целостность загруженных файлов (возможно, сбой сети или файл сканируется защитой системы). Попробуйте нажать «Повторить».'
+        }
 
         // Provide an option to skip download failures and try to launch anyway
         const action = await new Promise((resolve) => {
