@@ -405,7 +405,7 @@ class GameCrashHandler {
         } else if (crashAnalysis.type === 'gpu-driver-outdated') {
             await this.disableGraphicsMods()
             this.restartGame()
-        } else if (crashAnalysis.type === 'java-corruption') {
+        } else if (crashAnalysis.type === 'java-corruption' || crashAnalysis.type === 'wrong-java-version') {
             await this.handleJavaRepair()
         } else {
             const fixResult = await this.safeRemoveOrResetConfig(crashAnalysis.file)

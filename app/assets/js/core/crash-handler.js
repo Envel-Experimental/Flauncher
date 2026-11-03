@@ -219,7 +219,10 @@ exports.analyzeLog = function (logContent) {
 
     // 13. Wrong Java Version
     if (logContent.includes('java.lang.UnsupportedClassVersionError') ||
-        logContent.includes('java.lang.IncompatibleClassChangeError')) {
+        logContent.includes('java.lang.IncompatibleClassChangeError') ||
+        logContent.includes('Unsupported class file major version') ||
+        (logContent.includes('ClassNotFoundException: java.lang.System') && logContent.includes('ClientMainMixin')) ||
+        (logContent.includes('Error: Could not create the Java Virtual Machine') && logContent.includes('Program will exit'))) {
         return {
             type: 'wrong-java-version',
             file: 'Java Runtime',

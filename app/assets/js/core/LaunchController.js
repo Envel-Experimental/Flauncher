@@ -65,14 +65,18 @@ class LaunchController {
             });
         });
 
-        ipcMain.handle('sys:validateJava', async (event, path, version) => {
+        ipcMain.handle('sys:validateJava', async (event, path, version, suggestedMajor = null) => {
             const JavaGuard = require('./java/JavaGuard');
             const ConfigManager = require('./configmanager');
             let res;
             if (!path || path.trim() === '' || path === 'null') {
-                res = await JavaGuard.discoverBestJvmInstallation(ConfigManager.getDataDirectory(), version);
+                res = await (suggestedMajor !== null
+                    ? JavaGuard.discoverBestJvmInstallation(ConfigManager.getDataDirectory(), version, suggestedMajor)
+                    : JavaGuard.discoverBestJvmInstallation(ConfigManager.getDataDirectory(), version));
             } else {
-                res = await JavaGuard.validateSelectedJvm(path, version);
+                res = await (suggestedMajor !== null
+                    ? JavaGuard.validateSelectedJvm(path, version, suggestedMajor)
+                    : JavaGuard.validateSelectedJvm(path, version));
             }
             if (res && res.semver) delete res.semver;
             return res;

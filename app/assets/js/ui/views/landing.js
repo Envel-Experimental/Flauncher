@@ -193,7 +193,7 @@ if (launchButton) {
                 setLaunchPercentage(0, 100)
 
                 /** @type {any} */
-                const details = await ipcRenderer.invoke('sys:validateJava', ensureJavaDirIsRoot(jExe), server.effectiveJavaOptions.supported)
+                const details = await ipcRenderer.invoke('sys:validateJava', ensureJavaDirIsRoot(jExe), server.effectiveJavaOptions.supported, server.effectiveJavaOptions.suggestedMajor)
                 if (details != null) {
                     loggerLanding.info('Jvm Details', details)
                     await dlAsync()

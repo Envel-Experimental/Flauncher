@@ -158,12 +158,12 @@ class HeliosServer {
     defaultJavaVersion() {
         const mc = this.rawServer.minecraftVersion;
         if (mcVersionAtLeast('1.20.5', mc)) {
-            // For 1.20.5+, Java 21 is required.
-            return ['>=21.0.0 <26.0.0', 21];
+            // For 1.20.5+, Java 21 is required. Restrict upper bound below 23 to avoid class file incompatibility.
+            return ['>=21.0.0 <23.0.0', 21];
         }
         else if (mcVersionAtLeast('1.17', mc)) {
-            // For 1.17 to 1.20.4, Java 17 is recommended but 21 works.
-            return ['>=17.0.0 <26.0.0', 17];
+            // For 1.17 to 1.20.4, Java 21 is recommended (Java 17-21 supported). Prevent Java 22+ (ASM/Mixin incompatibility).
+            return ['>=17.0.0 <22.0.0', 21];
         }
         else {
             // For 1.16.5 and below, Java 8 is required.

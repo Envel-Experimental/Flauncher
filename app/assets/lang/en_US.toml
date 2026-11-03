@@ -286,8 +286,8 @@ mainServer = "Основной сервер"
 [js.settings.java]
 selectedJava = "Выбрано: Java {version} ({vendor})"
 invalidSelection = "Неверный выбор"
-requiresJava = "Требуется Java {major}."
-availableOptions = "Доступные варианты для Java {major} (HotSpot VM)"
+requiresJava = "Рекомендуется Java 21."
+availableOptions = "Доступные варианты для Java 21 (HotSpot VM)"
 
 [js.settings.about]
 preReleaseTitle = "Предрелиз"

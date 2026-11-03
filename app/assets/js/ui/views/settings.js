@@ -2228,7 +2228,7 @@ async function populateJavaExecDetails(execPath) {
     const server = distro.getServerById(ConfigManager.getSelectedServer())
     if (!server) return
 
-    const details = await ipcRenderer.invoke('sys:validateJava', ensureJavaDirIsRoot(execPath), server.effectiveJavaOptions.supported)
+    const details = await ipcRenderer.invoke('sys:validateJava', ensureJavaDirIsRoot(execPath), server.effectiveJavaOptions.supported, server.effectiveJavaOptions.suggestedMajor)
 
     if (typeof settingsJavaExecDetails !== 'undefined' && settingsJavaExecDetails != null) {
         if (details != null) {
@@ -2266,9 +2266,10 @@ function populateJavaExecDropdown(server) {
     // Add event listener to update config
     selectEl.onchange = async () => {
         const newVal = selectEl.value;
-        ConfigManager.setJavaExecutable(server.rawServer.id, newVal === '' ? null : newVal);
+        const finalVal = (!newVal || newVal.trim() === '' || newVal === 'null') ? null : newVal;
+        ConfigManager.setJavaExecutable(server.rawServer.id, finalVal);
         await ConfigManager.save();
-        await populateJavaExecDetails(newVal === '' ? null : newVal);
+        await populateJavaExecDetails(finalVal);
     };
 
     // Trigger initial population (async, in background)
@@ -2318,20 +2319,8 @@ export function populateJavaReqDesc(server) {
 }
 
 export function populateJvmOptsLink(server) {
-    const major = server.effectiveJavaOptions.suggestedMajor
-    settingsJvmOptsLink.innerHTML = Lang.queryJS('settings.java.availableOptions', { major: major })
-    if (major >= 12) {
-        settingsJvmOptsLink.href = `https://docs.oracle.com/en/java/javase/${major}/docs/specs/man/java.html#extra-options-for-java`
-    }
-    else if (major >= 11) {
-        settingsJvmOptsLink.href = 'https://docs.oracle.com/en/java/javase/11/tools/java.html#GUID-3B1CE181-CD30-4178-9602-230B800D4FAE'
-    }
-    else if (major >= 9) {
-        settingsJvmOptsLink.href = `https://docs.oracle.com/javase/${major}/tools/java.htm`
-    }
-    else {
-        settingsJvmOptsLink.href = `https://docs.oracle.com/javase/${major}/docs/technotes/tools/${process.platform === 'win32' ? 'windows' : 'unix'}/java.html`
-    }
+    settingsJvmOptsLink.innerHTML = Lang.queryJS('settings.java.availableOptions', { major: 21 })
+    settingsJvmOptsLink.href = 'https://f-launcher.ru/java.html'
 }
 
 export function bindMinMaxRam(server) {
