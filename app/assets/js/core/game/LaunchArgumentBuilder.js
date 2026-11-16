@@ -446,7 +446,7 @@ class LaunchArgumentBuilder {
 
         for (const lib of libArr) {
             const p = (async () => {
-                if (!isLibraryCompatible(lib.rules, lib.natives)) return
+                if (!isLibraryCompatible(lib.rules, lib.natives, lib.name)) return
 
                 let exclusions = []
                 if (lib.natives != null) {

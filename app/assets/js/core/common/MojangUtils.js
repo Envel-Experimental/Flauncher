@@ -48,7 +48,24 @@ function validateLibraryNatives(natives) {
     return natives == null ? true : Object.prototype.hasOwnProperty.call(natives, getMojangOS());
 }
 
-function isLibraryCompatible(rules, natives) {
+function isLibraryCompatible(rules, natives, name = null) {
+    if (name && name.includes(':natives-')) {
+        const regex = /.+:natives-([^-]+)(?:-(.+))?/.exec(name);
+        if (regex) {
+            const osName = regex[1];
+            const arch = regex[2] ?? 'x64';
+            const currentMojangOS = getMojangOS();
+            const osMatches = osName === currentMojangOS || 
+                (osName === 'osx' && currentMojangOS === 'osx') ||
+                (osName === 'macos' && currentMojangOS === 'osx') ||
+                (osName === 'windows' && currentMojangOS === 'windows') ||
+                (osName === 'linux' && currentMojangOS === 'linux');
+            if (!osMatches) return false;
+            const currentArch = process.arch;
+            const archMatches = arch === currentArch || (arch === 'aarch64' && currentArch === 'arm64');
+            if (!archMatches) return false;
+        }
+    }
     if (rules == null && natives == null) return true;
     if (rules != null) return validateLibraryRules(rules);
     return validateLibraryNatives(natives);

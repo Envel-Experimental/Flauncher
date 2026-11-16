@@ -93,7 +93,7 @@ FLauncher/
 │       │   │   │   └── JavaUtils.js  ← javaExecFromRoot(), ensureJavaDirIsRoot(), Platform enum.
 │       │   │   │
 │       │   │   ├── microsoft/        ← Microsoft auth implementation details.
-│       │   │   │   └── ...           ← OAuth token exchange, XBL/XSTS chain. See MicrosoftAuth.md.
+│       │   │   │   └── ...           ← OAuth token exchange, XBL/XSTS chain.
 │       │   │   │
 │       │   │   ├── mojang/           ← Legacy Mojang auth (deprecated, kept for migration).
 │       │   │   │   └── ...

@@ -226,7 +226,7 @@ Each sub-service in `app/main/` registers its own channels during `IpcRegistry.i
 | Service | Channels |
 |---------|---------|
 | `AutoUpdaterService` | `updater:checkForUpdates`, `updater:downloadUpdate`, `updater:installUpdate`, `updater:getStatus` |
-| `MicrosoftAuthService` | `auth:microsoft:*` — device-code flow (see [MicrosoftAuth.md](./MicrosoftAuth.md)) |
+| `MicrosoftAuthService` | `auth:microsoft:*` — device-code flow  |
 | `LauncherService` | `launcher:launch`, `launcher:kill`, `launcher:getStatus` |
 | `FsService` | `fs:read`, `fs:write`, `fs:exists`, `fs:mkdir`, `fs:readdir`, `fs:delete` |
 | `ModService` | `mod:list`, `mod:toggle`, `mod:install`, `mod:remove` |

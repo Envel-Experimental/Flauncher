@@ -74,7 +74,7 @@ The `distribution.json` includes a `version` and `timestamp` field:
 To roll back, publish a new distribution with:
 - An **increased `timestamp`** (must be newer than the current live version).
 - The affected server entry updated or reverted.
-- A **new Ed25519 signature** (see [signing_guide.md](./signing_guide.md)).
+- A **new Ed25519 signature**.
 
 You cannot "downgrade" to an older `distribution.json` because the anti-replay check will reject it.
 

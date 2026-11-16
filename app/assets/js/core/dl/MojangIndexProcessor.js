@@ -314,7 +314,7 @@ class MojangIndexProcessor extends IndexProcessor {
 
         const tasks = versionJson.libraries.map(libEntry => {
             return limit(async () => {
-                if (isLibraryCompatible(libEntry.rules, libEntry.natives)) {
+                if (isLibraryCompatible(libEntry.rules, libEntry.natives, libEntry.name)) {
                     let artifact;
                     if (libEntry.natives == null) {
                         artifact = libEntry.downloads.artifact;

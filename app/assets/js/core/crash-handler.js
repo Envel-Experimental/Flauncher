@@ -208,7 +208,12 @@ exports.analyzeLog = function (logContent) {
         logContent.includes('net') ||
         logContent.includes('nio') ||
         logContent.includes('fontmanager') ||
-        logContent.includes('sunec')
+        logContent.includes('sunec') ||
+        logContent.includes('Failed to locate library: lwjgl') ||
+        logContent.includes('Failed to locate library') ||
+        logContent.includes('lwjgl.dll') ||
+        logContent.includes('liblwjgl.so') ||
+        logContent.includes('liblwjgl.dylib')
     )) {
         return {
             type: 'java-corruption',

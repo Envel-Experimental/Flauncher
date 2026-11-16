@@ -170,4 +170,4 @@ npm run dist:mac   # Build macOS DMG
 npm run dist:linux # Build Linux AppImage/deb
 ```
 
-Signing is configured in `electron-builder.yml`. See [signing_guide.md](./signing_guide.md).
+Signing is configured in `electron-builder.yml`.
