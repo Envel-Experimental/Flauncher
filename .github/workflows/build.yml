@@ -230,7 +230,7 @@ jobs:
             echo "prerelease=true"                         >> $GITHUB_OUTPUT
             echo "release_name=Test Build (Compressed)"    >> $GITHUB_OUTPUT
           
-          elif [[ "$BRANCH" == "master" && "${{ github.event.head_commit.message }}" == "release" ]]; then
+          elif [[ "$BRANCH" == "master" && "${{ github.event.head_commit.message }}" =~ ^release ]]; then
             echo "tag_name=release-${{ github.run_id }}" >> $GITHUB_OUTPUT
             echo "prerelease=false"                 >> $GITHUB_OUTPUT
             echo "release_name=Release build"         >> $GITHUB_OUTPUT
