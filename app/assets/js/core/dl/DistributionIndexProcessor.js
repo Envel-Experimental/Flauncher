@@ -91,22 +91,30 @@ class DistributionIndexProcessor extends IndexProcessor {
 
                     if (relUrl) {
                         const sortedMirrors = MirrorManager.getSortedMirrors();
-                        let first = true;
-                        for (const mirror of sortedMirrors) {
-                            if (mirror.distribution) {
-                                let base = mirror.distribution;
-                                const lastSlash = base.lastIndexOf('/');
-                                // If the URL has a path (slash after the double slash of http://)
-                                if (lastSlash > 7) {
-                                    base = base.substring(0, lastSlash);
-                                }
-                                const cleanRelUrl = relUrl.startsWith('/') ? relUrl : '/' + relUrl;
-                                const fullUrl = base + cleanRelUrl;
-                                if (first) {
-                                    url = fullUrl;
-                                    first = false;
-                                } else {
-                                    fallbackUrls.push(fullUrl);
+                        const { REMOTE_DISTRO_URL } = require('../distromanager');
+                        if (REMOTE_DISTRO_URL && REMOTE_DISTRO_URL.startsWith('http://localhost')) {
+                            const lastSlash = REMOTE_DISTRO_URL.lastIndexOf('/');
+                            const localBase = lastSlash > 7 ? REMOTE_DISTRO_URL.substring(0, lastSlash) : REMOTE_DISTRO_URL;
+                            const cleanRelUrl = relUrl.startsWith('/') ? relUrl : '/' + relUrl;
+                            url = localBase + cleanRelUrl;
+                        } else {
+                            let first = true;
+                            for (const mirror of sortedMirrors) {
+                                if (mirror.distribution) {
+                                    let base = mirror.distribution;
+                                    const lastSlash = base.lastIndexOf('/');
+                                    // If the URL has a path (slash after the double slash of http://)
+                                    if (lastSlash > 7) {
+                                        base = base.substring(0, lastSlash);
+                                    }
+                                    const cleanRelUrl = relUrl.startsWith('/') ? relUrl : '/' + relUrl;
+                                    const fullUrl = base + cleanRelUrl;
+                                    if (first) {
+                                        url = fullUrl;
+                                        first = false;
+                                    } else {
+                                        fallbackUrls.push(fullUrl);
+                                    }
                                 }
                             }
                         }

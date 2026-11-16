@@ -148,6 +148,14 @@ class LaunchArgumentBuilder {
         if (!hasLibPath) {
             jvmArgs.push('-Djava.library.path=' + path.resolve(tempNativePath))
         }
+
+        const sep = LaunchArgumentBuilder.getClasspathSeparator()
+        const resolvedNativePath = path.resolve(tempNativePath)
+        const resolvedJavaNativePath = path.join(resolvedNativePath, 'java')
+        const hasLwjglLibPath = jvmArgs.some(arg => (typeof arg === 'string' && arg.includes('org.lwjgl.librarypath')) || (arg.value && Array.isArray(arg.value) && arg.value.some(v => v.includes('org.lwjgl.librarypath'))))
+        if (!hasLwjglLibPath) {
+            jvmArgs.push(`-Dorg.lwjgl.librarypath=${resolvedNativePath}${sep}${resolvedJavaNativePath}`)
+        }
         
         jvmArgs.push('-Xmx' + ConfigManager.getMaxRAM(this.server.rawServer.id))
         jvmArgs.push('-Xms' + ConfigManager.getMinRAM(this.server.rawServer.id))
@@ -483,7 +491,59 @@ class LaunchArgumentBuilder {
             }
         }
 
+        await this._flattenNatives(tempNativePath)
+
         return libs
+    }
+
+    async _flattenNatives(tempNativePath) {
+        const javaDir = path.join(tempNativePath, 'java')
+        const lwjglDir = path.join(tempNativePath, 'lwjgl')
+        const jnaDir = path.join(tempNativePath, 'jna')
+        const nettyDir = path.join(tempNativePath, 'netty')
+
+        await fs.mkdir(javaDir, { recursive: true })
+        await fs.mkdir(lwjglDir, { recursive: true })
+        await fs.mkdir(jnaDir, { recursive: true })
+        await fs.mkdir(nettyDir, { recursive: true })
+
+        const nativeExts = new Set(['.dll', '.so', '.dylib'])
+        const scan = async (dir) => {
+            const entries = await fs.readdir(dir, { withFileTypes: true })
+            for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name)
+                if (entry.isDirectory()) {
+                    if (fullPath === javaDir || fullPath === lwjglDir || fullPath === jnaDir || fullPath === nettyDir) {
+                        continue
+                    }
+                    await scan(fullPath)
+                } else if (entry.isFile()) {
+                    const ext = path.extname(entry.name).toLowerCase()
+                    if (nativeExts.has(ext)) {
+                        const targets = [
+                            path.join(tempNativePath, entry.name),
+                            path.join(javaDir, entry.name),
+                            path.join(lwjglDir, entry.name)
+                        ]
+                        for (const target of targets) {
+                            if (fullPath !== target) {
+                                try {
+                                    await fs.copyFile(fullPath, target)
+                                } catch (e) {
+                                    logger.warn('Failed to copy native file:', fullPath, 'to', target, e)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        try {
+            await scan(tempNativePath)
+        } catch (e) {
+            logger.warn('Failed to flatten natives in', tempNativePath, e)
+        }
     }
 
     async _extractNative(lib, tempNativePath) {
