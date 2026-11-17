@@ -43,7 +43,7 @@ describe('Live Mirror Download & Auto-Failover Integration', () => {
 
     test('downloads real distribution.json from live mirror and verifies integrity', async () => {
         const destPath = path.join(tmpDir, 'distribution.json')
-        const mirrorUrl = 'https://c5b0e231-0f4e-4fc2-b437-12f1eb34927f.selcdn.net/distribution.json'
+        const mirrorUrl = 'https://mirror.nikita.best/distribution.json'
 
         const buffer = await fetchBuffer(mirrorUrl)
         const actualHash = crypto.createHash('sha1').update(buffer).digest('hex')
@@ -57,8 +57,7 @@ describe('Live Mirror Download & Auto-Failover Integration', () => {
             hash: actualHash,
             size: actualSize,
             fallbackUrls: [
-                'https://f-launcher.ru/fox/new/distribution.json',
-                'https://mirror.nikita.best/distribution.json'
+                'https://f-launcher.ru/fox/new/distribution.json'
             ],
             maxAttempts: 3
         }

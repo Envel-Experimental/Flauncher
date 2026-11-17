@@ -180,6 +180,8 @@ class DistributionAPI {
             const rawBuffer = Buffer.from(rawText, 'utf-8');
 
             let signatureValid = false;
+            const remoteTimestampStr = data.timestamp || data.rss;
+            const remoteTimestamp = remoteTimestampStr ? new Date(remoteTimestampStr).getTime() : 0;
 
             if (this.trustedKeys && Array.isArray(this.trustedKeys) && this.trustedKeys.length > 0) {
                 try {
@@ -220,50 +222,58 @@ class DistributionAPI {
                 data: data,
                 responseStatus: RestResponseStatus.SUCCESS,
                 signatureValid: signatureValid,
-                url: url // Track which one won
+                url: url,
+                timestamp: remoteTimestamp
             };
         };
 
-        // Competitive Racing: Give the first URL (primary) a 500ms head start
-        // This satisfies the requirement: "if f-launcher is slower by 500+ ms or doesn't respond immediately, switch"
-        const promises = this.remoteUrls.map(async (url, index) => {
-            if (index > 0) {
-                // Secondary mirrors wait 500ms before starting
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
+        const results = [];
+        const errors = [];
+
+        // Launch requests to all candidate mirrors concurrently
+        const mirrorTasks = this.remoteUrls.map(async (url) => {
+            const startTime = Date.now();
             try {
-                return await fetchOne(url);
+                const res = await fetchOne(url);
+                const latency = Date.now() - startTime;
+                results.push({ ...res, latency });
             } catch (err) {
-                // Re-throw to be caught by Promise.any or similar
-                throw err;
+                errors.push(err);
             }
         });
 
-        try {
-            // Promise.any returns the first SUCCESSFUL promise
-            const winner = await Promise.any(promises);
+        // Collect all completed mirror responses
+        await Promise.all(mirrorTasks);
+
+        if (results.length > 0) {
+            // Pick candidate with highest timestamp; tie-breaker: lowest latency
+            results.sort((a, b) => {
+                if (b.timestamp !== a.timestamp) {
+                    return b.timestamp - a.timestamp;
+                }
+                return a.latency - b.latency;
+            });
+
+            const winner = results[0];
             if (winner.url !== this.remoteUrls[0]) {
-                console.log(`[DistributionAPI] Primary mirror was slow/down. Switched to: ${winner.url}`);
+                console.log(`[DistributionAPI] Selected optimal mirror (${new Date(winner.timestamp).toISOString()}, ${winner.latency}ms): ${winner.url}`);
             }
             return winner;
-        } catch (err) {
-            console.error('[DistributionAPI] All distribution sources failed or timed out.');
-            
-            let finalError = new Error('All mirrors failed');
-            
-            // Satisfy test expectations by extracting the specific security error if it exists
-            if (err instanceof AggregateError) {
-                // Priority: Replay > Signature > Other
-                const replayErr = err.errors.find(e => e.message.includes('replay'));
-                const sigErr = err.errors.find(e => e.message.includes('signature'));
-                
-                if (replayErr) finalError = replayErr;
-                else if (sigErr) finalError = sigErr;
-                else if (err.errors.length > 0) finalError = err.errors[0];
-            }
-
-            return handleFetchError('Pull Remote', finalError, DistributionAPI.log);
         }
+
+        console.error('[DistributionAPI] All distribution sources failed or timed out.');
+        
+        let finalError = new Error('All mirrors failed');
+        if (errors.length > 0) {
+            // Priority: Replay > Signature > Other
+            const replayErr = errors.find(e => e.message && e.message.includes('replay'));
+            const sigErr = errors.find(e => e.message && e.message.includes('signature'));
+            if (replayErr) finalError = replayErr;
+            else if (sigErr) finalError = sigErr;
+            else finalError = errors[0];
+        }
+
+        return handleFetchError('Pull Remote', finalError, DistributionAPI.log);
     }
 
     /**

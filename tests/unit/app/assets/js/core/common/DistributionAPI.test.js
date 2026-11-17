@@ -274,6 +274,36 @@ describe('DistributionAPI', () => {
             warnSpy.mockRestore()
             delete process.type
         })
+
+        it('should choose the mirror with newest timestamp and lowest latency', async () => {
+            const olderDistro = { version: '1.0.0', servers: [], timestamp: '2026-09-01T00:00:00.000Z' }
+            const newerDistro = { version: '1.0.0', servers: [], timestamp: '2026-11-16T12:00:00.000Z' }
+
+            const multiApi = new DistributionAPI('/launcher', '/common', '/instance', [
+                'http://fast-stale.com/distro',
+                'http://slow-fresh.com/distro'
+            ], false, [])
+
+            configmanager.fetchWithTimeout.mockImplementation(async (url) => {
+                if (url.includes('fast-stale')) {
+                    return {
+                        ok: true,
+                        arrayBuffer: async () => Buffer.from(JSON.stringify(olderDistro)),
+                        status: 200
+                    }
+                }
+                return {
+                    ok: true,
+                    arrayBuffer: async () => Buffer.from(JSON.stringify(newerDistro)),
+                    status: 200
+                }
+            })
+
+            const result = await multiApi.pullRemote()
+            expect(result.responseStatus).toBe('SUCCESS')
+            expect(result.url).toBe('http://slow-fresh.com/distro')
+            expect(result.data.timestamp).toBe('2026-11-16T12:00:00.000Z')
+        })
     })
 
     describe('File I/O and JSON Handling', () => {
