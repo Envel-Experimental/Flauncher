@@ -234,6 +234,10 @@ jobs:
             echo "tag_name=release-${{ github.run_id }}" >> $GITHUB_OUTPUT
             echo "prerelease=false"                 >> $GITHUB_OUTPUT
             echo "release_name=Release build"         >> $GITHUB_OUTPUT
+          elif [[ "$BRANCH" == "master" && ( "${{ github.actor }}" == "dependabot[bot]" || "${{ github.event.head_commit.message }}" =~ (\[stable\]|\[patch\]|dependabot|security) ) ]]; then
+            echo "tag_name=prerelease-${{ github.run_id }}" >> $GITHUB_OUTPUT
+            echo "prerelease=true"                         >> $GITHUB_OUTPUT
+            echo "release_name=Prerelease build from master STABLE" >> $GITHUB_OUTPUT
           elif [[ "$BRANCH" == "master" ]]; then
             echo "tag_name=prerelease-${{ github.run_id }}" >> $GITHUB_OUTPUT
             echo "prerelease=true"                         >> $GITHUB_OUTPUT
