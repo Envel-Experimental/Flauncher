@@ -61,7 +61,7 @@
     "assert": "^2.1.0",
     "babel-jest": "^30.4.1",
     "constants-browserify": "^1.0.0",
-    "electron": "^43.3.0",
+    "electron": "^45.5.0",
     "electron-builder": "^26.7.0",
     "esbuild": "^0.28.2",
     "eslint": "^10.0.0",
