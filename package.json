@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "@babel/preset-env": "^8.0.7",
-    "@babel/preset-react": "^7.24.0",
+    "@babel/preset-react": "^8.0.1",
     "@emnapi/core": "^1.11.3",
     "@emnapi/runtime": "^1.11.3",
     "@eslint/js": "^10.0.1",
